@@ -1,11 +1,11 @@
 package todomvc.view;
 
 import todomvc.data.VisibilityFilter;
-import doom.Component;
-import Doom.*;
-import doom.Node;
+import doom.html.Html.*;
+import doom.html.Component;
+// import doom.Node;
 
-class Footer extends Component<FooterApi, FooterState> {
+class Footer extends Component<{ api : FooterApi, state : FooterState }> {
   override function render() {
     var footerContent = [
         span([
@@ -37,7 +37,7 @@ class Footer extends Component<FooterApi, FooterState> {
           ], "Completed"))
         ])
       ];
-    if(state.hasCompleted) {
+    if(props.state.hasCompleted) {
       footerContent.push(
         button([
           "class" => "clear-completed",
@@ -49,16 +49,16 @@ class Footer extends Component<FooterApi, FooterState> {
   }
 
   function handleClear()
-    api.clearCompleted();
+    props.api.clearCompleted();
 
   function handleClickFilter(filter : VisibilityFilter)
-    api.setFilter(filter);
+    props.api.setFilter(filter);
 
   function isFilter(filter : VisibilityFilter)
-    return Type.enumEq(state.filter, filter);
+    return Type.enumEq(props.state.filter, filter);
 
-  function getItemsLeftLabel() : Array<Node>
-    return state.remaining == 1 ? [strong("1"), " item left"] : [strong('${state.remaining}'), " items left"];
+  function getItemsLeftLabel() : Array<doom.core.VNode>
+    return props.state.remaining == 1 ? [strong("1"), " item left"] : [strong('${props.state.remaining}'), " items left"];
 }
 
 typedef FooterApi = {

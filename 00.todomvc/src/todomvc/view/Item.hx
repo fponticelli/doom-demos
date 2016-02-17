@@ -1,17 +1,19 @@
 package todomvc.view;
 
-import Doom.*;
-import doom.Component;
+import doom.html.Html.*;
+import doom.html.Component;
+import js.html.Element;
 import js.html.KeyboardEvent;
 import todomvc.data.TodoItem;
+using thx.Objects;
 using thx.Strings;
 
-class Item extends Component<ItemApi, ItemState> {
+class Item extends Component<{ api : ItemApi, state : ItemState }> {
   override function render()
     return li([
         "class" => [
-          "completed" => state.item.completed,
-          "editing"   => state.editing,
+          "completed" => props.state.item.completed,
+          "editing"   => props.state.editing,
         ],
         "dblclick" => handleDblClick
       ], [
@@ -19,39 +21,39 @@ class Item extends Component<ItemApi, ItemState> {
         input([
           "class"   => "toggle",
           "type"    => "checkbox",
-          "checked" => state.item.completed,
-          "change"  => api.toggle
+          "checked" => props.state.item.completed,
+          "change"  => props.api.toggle
         ]),
-        label(state.item.text),
+        label(props.state.item.text),
         button([
           "class" => "destroy",
-          "click" => api.remove
+          "click" => props.api.remove
         ])
       ]),
       input([
         "class" => "edit",
-        "value" => state.item.text,
+        "value" => props.state.item.text,
         "blur"  => handleBlur,
         "keyup" => handleKeydown,
       ])
     ]);
 
   function handleDblClick() {
-    state.editing = true;
-    update(state);
+    props.state.editing = true;
+    update(props);
     getInput().select();
   }
 
   function handleBlur() {
-    if(!state.editing) return;
-    state.editing = false;
+    if(!props.state.editing) return;
+    props.state.editing = false;
     var value = getInputValueAndTrim();
     if(value.isEmpty()) {
-      api.remove();
-    } else if(value != state.item.text) {
-      api.updateText(value);
+      props.api.remove();
+    } else if(value != props.state.item.text) {
+      props.api.updateText(value);
     } else {
-      update({ item : state.item, editing : false });
+      update(props.merge({ state : { item : props.state.item, editing : false }}));
     }
   }
 
@@ -62,7 +64,7 @@ class Item extends Component<ItemApi, ItemState> {
   }
 
   function getInput() : js.html.InputElement
-    return cast element.querySelector("input.edit");
+    return cast (cast element : Element).querySelector("input.edit");
 
   function getInputValueAndTrim() {
     var input = getInput();

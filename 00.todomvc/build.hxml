@@ -1,6 +1,6 @@
 -js js/app.js
--cp ../../src
 -cp src
+-lib doom
 -lib dots
 -lib lies
 -lib thx.core

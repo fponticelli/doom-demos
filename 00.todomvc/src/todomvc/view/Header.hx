@@ -1,12 +1,13 @@
 package todomvc.view;
 
-import doom.Component;
+
+import doom.html.Html.*;
+import doom.html.Component;
 import dots.Keys;
-import Doom.*;
 import js.html.*;
 using thx.Strings;
 
-class Header extends Component<AddItemApi, {}> {
+class Header extends Component<AddItemApi> {
   override function render()
     return header([
         "class" => "header"
@@ -25,12 +26,12 @@ class Header extends Component<AddItemApi, {}> {
       e.preventDefault();
       var value = getInputValueAndEmpty();
       if(value.isEmpty()) return;
-      api.add(value);
+      props.add(value);
     }
   }
 
   function getInputValueAndEmpty() {
-    var el : InputElement = cast element.querySelector("input"),
+    var el : InputElement = cast (cast element : Element).querySelector("input"),
         value = el.value.trim();
     el.value = "";
     return value;
