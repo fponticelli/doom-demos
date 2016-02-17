@@ -3,7 +3,6 @@ package todomvc.view;
 import todomvc.data.VisibilityFilter;
 import doom.html.Html.*;
 import doom.html.Component;
-// import doom.Node;
 
 class Footer extends Component<{ api : FooterApi, state : FooterState }> {
   override function render() {

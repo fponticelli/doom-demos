@@ -1,10 +1,10 @@
 package todomvc.view;
 
-
 import doom.html.Html.*;
 import doom.html.Component;
 import dots.Keys;
-import js.html.*;
+import js.html.InputElement;
+import js.html.KeyboardEvent;
 using thx.Strings;
 
 class Header extends Component<AddItemApi> {
@@ -31,7 +31,7 @@ class Header extends Component<AddItemApi> {
   }
 
   function getInputValueAndEmpty() {
-    var el : InputElement = cast (cast element : Element).querySelector("input"),
+    var el : InputElement = cast element.querySelector("input"),
         value = el.value.trim();
     el.value = "";
     return value;

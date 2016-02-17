@@ -2,7 +2,6 @@ package todomvc.view;
 
 import doom.html.Html.*;
 import doom.html.Component;
-import js.html.Element;
 import js.html.KeyboardEvent;
 import todomvc.data.TodoItem;
 using thx.Objects;
@@ -64,7 +63,7 @@ class Item extends Component<{ api : ItemApi, state : ItemState }> {
   }
 
   function getInput() : js.html.InputElement
-    return cast (cast element : Element).querySelector("input.edit");
+    return cast element.querySelector("input.edit");
 
   function getInputValueAndTrim() {
     var input = getInput();
