@@ -16,682 +16,11 @@ DateTools.getMonthDays = function(d) {
 	var isB = year % 4 == 0 && year % 100 != 0 || year % 400 == 0;
 	if(isB) return 29; else return 28;
 };
-var EReg = function(r,opt) {
-	opt = opt.split("u").join("");
-	this.r = new RegExp(r,opt);
-};
-EReg.__name__ = ["EReg"];
-EReg.prototype = {
-	r: null
-	,match: function(s) {
-		if(this.r.global) this.r.lastIndex = 0;
-		this.r.m = this.r.exec(s);
-		this.r.s = s;
-		return this.r.m != null;
-	}
-	,matched: function(n) {
-		if(this.r.m != null && n >= 0 && n < this.r.m.length) return this.r.m[n]; else throw new js__$Boot_HaxeError("EReg::matched");
-	}
-	,matchedPos: function() {
-		if(this.r.m == null) throw new js__$Boot_HaxeError("No string matched");
-		return { pos : this.r.m.index, len : this.r.m[0].length};
-	}
-	,matchSub: function(s,pos,len) {
-		if(len == null) len = -1;
-		if(this.r.global) {
-			this.r.lastIndex = pos;
-			this.r.m = this.r.exec(len < 0?s:HxOverrides.substr(s,0,pos + len));
-			var b = this.r.m != null;
-			if(b) this.r.s = s;
-			return b;
-		} else {
-			var b1 = this.match(len < 0?HxOverrides.substr(s,pos,null):HxOverrides.substr(s,pos,len));
-			if(b1) {
-				this.r.s = s;
-				this.r.m.index += pos;
-			}
-			return b1;
-		}
-	}
-	,split: function(s) {
-		var d = "#__delim__#";
-		return s.replace(this.r,d).split(d);
-	}
-	,replace: function(s,by) {
-		return s.replace(this.r,by);
-	}
-	,map: function(s,f) {
-		var offset = 0;
-		var buf_b = "";
-		while(true) {
-			if(offset >= s.length) break; else if(!this.matchSub(s,offset)) {
-				buf_b += Std.string(HxOverrides.substr(s,offset,null));
-				break;
-			}
-			var p = this.matchedPos();
-			buf_b += Std.string(HxOverrides.substr(s,offset,p.pos - offset));
-			buf_b += Std.string(f(this));
-			if(p.len == 0) {
-				buf_b += Std.string(HxOverrides.substr(s,p.pos,1));
-				offset = p.pos + 1;
-			} else offset = p.pos + p.len;
-			if(!this.r.global) break;
-		}
-		if(!this.r.global && offset > 0 && offset < s.length) buf_b += Std.string(HxOverrides.substr(s,offset,null));
-		return buf_b;
-	}
-	,__class__: EReg
-};
-var HxOverrides = function() { };
-HxOverrides.__name__ = ["HxOverrides"];
-HxOverrides.dateStr = function(date) {
-	var m = date.getMonth() + 1;
-	var d = date.getDate();
-	var h = date.getHours();
-	var mi = date.getMinutes();
-	var s = date.getSeconds();
-	return date.getFullYear() + "-" + (m < 10?"0" + m:"" + m) + "-" + (d < 10?"0" + d:"" + d) + " " + (h < 10?"0" + h:"" + h) + ":" + (mi < 10?"0" + mi:"" + mi) + ":" + (s < 10?"0" + s:"" + s);
-};
-HxOverrides.strDate = function(s) {
-	var _g = s.length;
-	switch(_g) {
-	case 8:
-		var k = s.split(":");
-		var d = new Date();
-		d.setTime(0);
-		d.setUTCHours(k[0]);
-		d.setUTCMinutes(k[1]);
-		d.setUTCSeconds(k[2]);
-		return d;
-	case 10:
-		var k1 = s.split("-");
-		return new Date(k1[0],k1[1] - 1,k1[2],0,0,0);
-	case 19:
-		var k2 = s.split(" ");
-		var y = k2[0].split("-");
-		var t = k2[1].split(":");
-		return new Date(y[0],y[1] - 1,y[2],t[0],t[1],t[2]);
-	default:
-		throw new js__$Boot_HaxeError("Invalid date format : " + s);
-	}
-};
-HxOverrides.cca = function(s,index) {
-	var x = s.charCodeAt(index);
-	if(x != x) return undefined;
-	return x;
-};
-HxOverrides.substr = function(s,pos,len) {
-	if(len == null) len = s.length; else if(len < 0) {
-		if(pos == 0) len = s.length + len; else return "";
-	}
-	if(pos < 0) {
-		pos = s.length + pos;
-		if(pos < 0) pos = 0;
-	}
-	return s.substr(pos,len);
-};
-HxOverrides.indexOf = function(a,obj,i) {
-	var len = a.length;
-	if(i < 0) {
-		i += len;
-		if(i < 0) i = 0;
-	}
-	while(i < len) {
-		if(a[i] === obj) return i;
-		i++;
-	}
-	return -1;
-};
-HxOverrides.remove = function(a,obj) {
-	var i = HxOverrides.indexOf(a,obj,0);
-	if(i == -1) return false;
-	a.splice(i,1);
-	return true;
-};
-HxOverrides.iter = function(a) {
-	return { cur : 0, arr : a, hasNext : function() {
-		return this.cur < this.arr.length;
-	}, next : function() {
-		return this.arr[this.cur++];
-	}};
-};
-var Lambda = function() { };
-Lambda.__name__ = ["Lambda"];
-Lambda.has = function(it,elt) {
-	var tmp = $iterator(it)();
-	while(tmp.hasNext()) {
-		var x = tmp.next();
-		if(x == elt) return true;
-	}
-	return false;
-};
-var Main = function() { };
-Main.__name__ = ["Main"];
-Main.main = function() {
-	var doom1 = new doom_html_Render();
-	doom1.mount(doom_core_VNodeImpl.ComponentNode(new svg_SvgApp({ })),dots_Query.find("section.svg"));
-};
-Math.__name__ = ["Math"];
-var Reflect = function() { };
-Reflect.__name__ = ["Reflect"];
-Reflect.field = function(o,field) {
-	try {
-		return o[field];
-	} catch( e ) {
-		haxe_CallStack.lastException = e;
-		return null;
-	}
-};
-Reflect.fields = function(o) {
-	var a = [];
-	if(o != null) {
-		var hasOwnProperty = Object.prototype.hasOwnProperty;
-		for( var f in o ) {
-		if(f != "__id__" && f != "hx__closures__" && hasOwnProperty.call(o,f)) a.push(f);
-		}
-	}
-	return a;
-};
-Reflect.isFunction = function(f) {
-	return typeof(f) == "function" && !(f.__name__ || f.__ename__);
-};
-Reflect.compare = function(a,b) {
-	if(a == b) return 0; else if(a > b) return 1; else return -1;
-};
-Reflect.compareMethods = function(f1,f2) {
-	if(f1 == f2) return true;
-	if(!Reflect.isFunction(f1) || !Reflect.isFunction(f2)) return false;
-	if(f1.scope == f2.scope && f1.method == f2.method) return f1.method != null; else return false;
-};
-Reflect.isObject = function(v) {
-	if(v == null) return false;
-	var t = typeof(v);
-	return t == "string" || t == "object" && v.__enum__ == null || t == "function" && (v.__name__ || v.__ename__) != null;
-};
-Reflect.isEnumValue = function(v) {
-	if(v != null) return v.__enum__ != null; else return false;
-};
-Reflect.deleteField = function(o,field) {
-	if(!Object.prototype.hasOwnProperty.call(o,field)) return false;
-	delete(o[field]);
-	return true;
-};
-var Std = function() { };
-Std.__name__ = ["Std"];
-Std.string = function(s) {
-	return js_Boot.__string_rec(s,"");
-};
-Std.parseInt = function(x) {
-	var v = parseInt(x,10);
-	if(v == 0 && (HxOverrides.cca(x,1) == 120 || HxOverrides.cca(x,1) == 88)) v = parseInt(x);
-	if(isNaN(v)) return null;
-	return v;
-};
-Std.random = function(x) {
-	if(x <= 0) return 0; else return Math.floor(Math.random() * x);
-};
-var StringBuf = function() {
-	this.b = "";
-};
-StringBuf.__name__ = ["StringBuf"];
-StringBuf.prototype = {
-	b: null
-	,__class__: StringBuf
-};
-var StringTools = function() { };
-StringTools.__name__ = ["StringTools"];
-StringTools.startsWith = function(s,start) {
-	if(s.length >= start.length) return HxOverrides.substr(s,0,start.length) == start; else return false;
-};
-StringTools.endsWith = function(s,end) {
-	var elen = end.length;
-	var slen = s.length;
-	if(slen >= elen) return HxOverrides.substr(s,slen - elen,elen) == end; else return false;
-};
-StringTools.isSpace = function(s,pos) {
-	var c = HxOverrides.cca(s,pos);
-	if(!(c > 8 && c < 14)) return c == 32; else return true;
-};
-StringTools.ltrim = function(s) {
-	var l = s.length;
-	var r = 0;
-	while(r < l && StringTools.isSpace(s,r)) ++r;
-	if(r > 0) return HxOverrides.substr(s,r,l - r); else return s;
-};
-StringTools.rtrim = function(s) {
-	var l = s.length;
-	var r = 0;
-	while(r < l && StringTools.isSpace(s,l - r - 1)) ++r;
-	if(r > 0) return HxOverrides.substr(s,0,l - r); else return s;
-};
-StringTools.trim = function(s) {
-	return StringTools.ltrim(StringTools.rtrim(s));
-};
-StringTools.lpad = function(s,c,l) {
-	if(c.length <= 0) return s;
-	while(s.length < l) s = c + s;
-	return s;
-};
-StringTools.rpad = function(s,c,l) {
-	if(c.length <= 0) return s;
-	while(s.length < l) s += c;
-	return s;
-};
-StringTools.replace = function(s,sub,by) {
-	return s.split(sub).join(by);
-};
-var ValueType = { __ename__ : ["ValueType"], __constructs__ : ["TNull","TInt","TFloat","TBool","TObject","TFunction","TClass","TEnum","TUnknown"] };
-ValueType.TNull = ["TNull",0];
-ValueType.TNull.toString = $estr;
-ValueType.TNull.__enum__ = ValueType;
-ValueType.TInt = ["TInt",1];
-ValueType.TInt.toString = $estr;
-ValueType.TInt.__enum__ = ValueType;
-ValueType.TFloat = ["TFloat",2];
-ValueType.TFloat.toString = $estr;
-ValueType.TFloat.__enum__ = ValueType;
-ValueType.TBool = ["TBool",3];
-ValueType.TBool.toString = $estr;
-ValueType.TBool.__enum__ = ValueType;
-ValueType.TObject = ["TObject",4];
-ValueType.TObject.toString = $estr;
-ValueType.TObject.__enum__ = ValueType;
-ValueType.TFunction = ["TFunction",5];
-ValueType.TFunction.toString = $estr;
-ValueType.TFunction.__enum__ = ValueType;
-ValueType.TClass = function(c) { var $x = ["TClass",6,c]; $x.__enum__ = ValueType; $x.toString = $estr; return $x; };
-ValueType.TEnum = function(e) { var $x = ["TEnum",7,e]; $x.__enum__ = ValueType; $x.toString = $estr; return $x; };
-ValueType.TUnknown = ["TUnknown",8];
-ValueType.TUnknown.toString = $estr;
-ValueType.TUnknown.__enum__ = ValueType;
-var Type = function() { };
-Type.__name__ = ["Type"];
-Type.getEnum = function(o) {
-	if(o == null) return null;
-	return o.__enum__;
-};
-Type.getSuperClass = function(c) {
-	return c.__super__;
-};
-Type.getClassName = function(c) {
-	var a = c.__name__;
-	if(a == null) return null;
-	return a.join(".");
-};
-Type.getEnumName = function(e) {
-	var a = e.__ename__;
-	return a.join(".");
-};
-Type.createInstance = function(cl,args) {
-	var _g = args.length;
-	switch(_g) {
-	case 0:
-		return new cl();
-	case 1:
-		return new cl(args[0]);
-	case 2:
-		return new cl(args[0],args[1]);
-	case 3:
-		return new cl(args[0],args[1],args[2]);
-	case 4:
-		return new cl(args[0],args[1],args[2],args[3]);
-	case 5:
-		return new cl(args[0],args[1],args[2],args[3],args[4]);
-	case 6:
-		return new cl(args[0],args[1],args[2],args[3],args[4],args[5]);
-	case 7:
-		return new cl(args[0],args[1],args[2],args[3],args[4],args[5],args[6]);
-	case 8:
-		return new cl(args[0],args[1],args[2],args[3],args[4],args[5],args[6],args[7]);
-	default:
-		throw new js__$Boot_HaxeError("Too many arguments");
-	}
-	return null;
-};
-Type.createEmptyInstance = function(cl) {
-	function empty() {}; empty.prototype = cl.prototype;
-	return new empty();
-};
-Type.getInstanceFields = function(c) {
-	var a = [];
-	for(var i in c.prototype) a.push(i);
-	HxOverrides.remove(a,"__class__");
-	HxOverrides.remove(a,"__properties__");
-	return a;
-};
-Type["typeof"] = function(v) {
-	var _g = typeof(v);
-	switch(_g) {
-	case "boolean":
-		return ValueType.TBool;
-	case "string":
-		return ValueType.TClass(String);
-	case "number":
-		if(Math.ceil(v) == v % 2147483648.0) return ValueType.TInt;
-		return ValueType.TFloat;
-	case "object":
-		if(v == null) return ValueType.TNull;
-		var e = v.__enum__;
-		if(e != null) return ValueType.TEnum(e);
-		var c = js_Boot.getClass(v);
-		if(c != null) return ValueType.TClass(c);
-		return ValueType.TObject;
-	case "function":
-		if(v.__name__ || v.__ename__) return ValueType.TObject;
-		return ValueType.TFunction;
-	case "undefined":
-		return ValueType.TNull;
-	default:
-		return ValueType.TUnknown;
-	}
-};
-var doom_core__$AttributeValue_AttributeValue_$Impl_$ = {};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.__name__ = ["doom","core","_AttributeValue","AttributeValue_Impl_"];
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString = function(s) {
-	return doom_core_AttributeValueImpl.StringAttribute(s);
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromMap = function(map) {
-	var values = [];
-	var tmp = map.keys();
-	while(tmp.hasNext()) {
-		var key = tmp.next();
-		if(__map_reserved[key] != null?map.getReserved(key):map.h[key]) values.push(key);
-	}
-	return doom_core_AttributeValueImpl.StringAttribute(values.join(" "));
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromBool = function(b) {
-	return doom_core_AttributeValueImpl.BoolAttribute(b);
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromHandler = function(f) {
-	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(function(e) {
-		e.preventDefault();
-		f();
-	});
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromEventHandler = function(f) {
-	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(f);
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromElementHandler = function(f) {
-	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(function(e) {
-		e.preventDefault();
-		var input = e.target;
-		f(input);
-	});
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromStringValueHandler = function(f) {
-	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(function(e) {
-		e.preventDefault();
-		var value = dots_Dom.getValue(e.target);
-		f(value);
-	});
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromBoolValueHandler = function(f) {
-	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(function(e) {
-		e.preventDefault();
-		var value = e.target.checked;
-		f(value);
-	});
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromIntValueHandler = function(f) {
-	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core__$AttributeValue_AttributeValue_$Impl_$.fromStringValueHandler(function(s) {
-		if(thx_Ints.canParse(s)) f(thx_Ints.parse(s));
-	});
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.fromFloatValueHandler = function(f) {
-	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core__$AttributeValue_AttributeValue_$Impl_$.fromStringValueHandler(function(s) {
-		if(thx_Floats.canParse(s)) f(thx_Floats.parse(s));
-	});
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.toString = function(this1) {
-	var a = this1;
-	switch(this1[1]) {
-	case 1:
-		var s = this1[2];
-		return s;
-	default:
-		throw new thx_Error("cannot convert attribute " + Std.string(a) + " to string",null,{ fileName : "AttributeValue.hx", lineNumber : 67, className : "doom.core._AttributeValue.AttributeValue_Impl_", methodName : "toString"});
-	}
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.equalsTo = function(this1,that) {
-	if(this1 == null) return false; else switch(this1[1]) {
-	case 0:
-		if(that == null) return false; else switch(that[1]) {
-		case 0:
-			var a = this1[2];
-			var b = that[2];
-			return a == b;
-		default:
-			return false;
-		}
-		break;
-	case 1:
-		if(that == null) return false; else switch(that[1]) {
-		case 1:
-			var a1 = this1[2];
-			var b1 = that[2];
-			return a1 == b1;
-		default:
-			return false;
-		}
-		break;
-	default:
-		if(that == null) return false; else switch(that[1]) {
-		default:
-			return false;
-		}
-	}
-};
-doom_core__$AttributeValue_AttributeValue_$Impl_$.notEqualsTo = function(this1,that) {
-	return !doom_core__$AttributeValue_AttributeValue_$Impl_$.equalsTo(this1,that);
-};
-var doom_core_AttributeValueImpl = { __ename__ : ["doom","core","AttributeValueImpl"], __constructs__ : ["BoolAttribute","StringAttribute","EventAttribute"] };
-doom_core_AttributeValueImpl.BoolAttribute = function(b) { var $x = ["BoolAttribute",0,b]; $x.__enum__ = doom_core_AttributeValueImpl; $x.toString = $estr; return $x; };
-doom_core_AttributeValueImpl.StringAttribute = function(s) { var $x = ["StringAttribute",1,s]; $x.__enum__ = doom_core_AttributeValueImpl; $x.toString = $estr; return $x; };
-doom_core_AttributeValueImpl.EventAttribute = function(f) { var $x = ["EventAttribute",2,f]; $x.__enum__ = doom_core_AttributeValueImpl; $x.toString = $estr; return $x; };
-var doom_core_Component = function(props,children) {
-	this.isUnmounted = false;
-	this.props = props;
-	this.children = children;
-};
-doom_core_Component.__name__ = ["doom","core","Component"];
-doom_core_Component.prototype = {
-	props: null
-	,children: null
-	,node: null
-	,isUnmounted: null
-	,apply: null
-	,render: function() {
-		throw new thx_error_AbstractMethod({ fileName : "Component.hx", lineNumber : 16, className : "doom.core.Component", methodName : "render"});
-	}
-	,asNode: function() {
-		return doom_core_VNodeImpl.ComponentNode(this);
-	}
-	,update: function(props) {
-		var old = this.props;
-		this.props = props;
-		if(!this.shouldUpdate(old,props) || !this.shouldRender()) return;
-		this.apply(doom_core_VNodeImpl.ComponentNode(this),this.node);
-	}
-	,shouldUpdate: function(oldProps,newProps) {
-		return true;
-	}
-	,shouldRender: function() {
-		return !this.isUnmounted;
-	}
-	,migrationFields: function() {
-		return ["props","update"];
-	}
-	,didMount: function() {
-	}
-	,willMount: function() {
-	}
-	,willUpdate: function() {
-	}
-	,didUpdate: function() {
-	}
-	,didUnmount: function() {
-	}
-	,willUnmount: function() {
-	}
-	,__class__: doom_core_Component
-};
 var doom_core_IRender = function() { };
 doom_core_IRender.__name__ = ["doom","core","IRender"];
 doom_core_IRender.prototype = {
 	apply: null
 	,__class__: doom_core_IRender
-};
-var doom_core__$VNode_VNode_$Impl_$ = {};
-doom_core__$VNode_VNode_$Impl_$.__name__ = ["doom","core","_VNode","VNode_Impl_"];
-doom_core__$VNode_VNode_$Impl_$.text = function(s) {
-	return doom_core_VNodeImpl.Text(s);
-};
-doom_core__$VNode_VNode_$Impl_$.comp = function(comp) {
-	return doom_core_VNodeImpl.ComponentNode(comp);
-};
-doom_core__$VNode_VNode_$Impl_$.raw = function(content) {
-	return doom_core_VNodeImpl.Raw(content);
-};
-doom_core__$VNode_VNode_$Impl_$.comment = function(content) {
-	return doom_core_VNodeImpl.Comment(content);
-};
-doom_core__$VNode_VNode_$Impl_$.el = function(name,attributes,children) {
-	if(null == attributes) attributes = new haxe_ds_StringMap();
-	if(null == children) children = [];
-	return doom_core_VNodeImpl.Element(name,attributes,children);
-};
-var doom_core_VNodeImpl = { __ename__ : ["doom","core","VNodeImpl"], __constructs__ : ["Element","Comment","Raw","Text","ComponentNode"] };
-doom_core_VNodeImpl.Element = function(name,attributes,children) { var $x = ["Element",0,name,attributes,children]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
-doom_core_VNodeImpl.Comment = function(comment) { var $x = ["Comment",1,comment]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
-doom_core_VNodeImpl.Raw = function(code) { var $x = ["Raw",2,code]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
-doom_core_VNodeImpl.Text = function(text) { var $x = ["Text",3,text]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
-doom_core_VNodeImpl.ComponentNode = function(comp) { var $x = ["ComponentNode",4,comp]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
-var doom_core__$VNodes_VNodes_$Impl_$ = {};
-doom_core__$VNodes_VNodes_$Impl_$.__name__ = ["doom","core","_VNodes","VNodes_Impl_"];
-doom_core__$VNodes_VNodes_$Impl_$.node = function(node) {
-	return [node];
-};
-doom_core__$VNodes_VNodes_$Impl_$.nodeImpl = function(node) {
-	return [node];
-};
-doom_core__$VNodes_VNodes_$Impl_$.nodesImpl = function(nodes) {
-	return nodes;
-};
-doom_core__$VNodes_VNodes_$Impl_$.comps = function(comps) {
-	return comps.map(doom_core__$VNode_VNode_$Impl_$.comp);
-};
-doom_core__$VNodes_VNodes_$Impl_$.comment = function(content) {
-	return [doom_core_VNodeImpl.Comment(content)];
-};
-doom_core__$VNodes_VNodes_$Impl_$.text = function(content) {
-	return [doom_core_VNodeImpl.Text(content)];
-};
-doom_core__$VNodes_VNodes_$Impl_$.comp = function(comp) {
-	return [doom_core_VNodeImpl.ComponentNode(comp)];
-};
-var doom_html_AttributeType = { __ename__ : ["doom","html","AttributeType"], __constructs__ : ["BooleanAttribute","Property","BooleanProperty","OverloadedBooleanAttribute","NumericAttribute","PositiveNumericAttribute","SideEffectProperty"] };
-doom_html_AttributeType.BooleanAttribute = ["BooleanAttribute",0];
-doom_html_AttributeType.BooleanAttribute.toString = $estr;
-doom_html_AttributeType.BooleanAttribute.__enum__ = doom_html_AttributeType;
-doom_html_AttributeType.Property = ["Property",1];
-doom_html_AttributeType.Property.toString = $estr;
-doom_html_AttributeType.Property.__enum__ = doom_html_AttributeType;
-doom_html_AttributeType.BooleanProperty = ["BooleanProperty",2];
-doom_html_AttributeType.BooleanProperty.toString = $estr;
-doom_html_AttributeType.BooleanProperty.__enum__ = doom_html_AttributeType;
-doom_html_AttributeType.OverloadedBooleanAttribute = ["OverloadedBooleanAttribute",3];
-doom_html_AttributeType.OverloadedBooleanAttribute.toString = $estr;
-doom_html_AttributeType.OverloadedBooleanAttribute.__enum__ = doom_html_AttributeType;
-doom_html_AttributeType.NumericAttribute = ["NumericAttribute",4];
-doom_html_AttributeType.NumericAttribute.toString = $estr;
-doom_html_AttributeType.NumericAttribute.__enum__ = doom_html_AttributeType;
-doom_html_AttributeType.PositiveNumericAttribute = ["PositiveNumericAttribute",5];
-doom_html_AttributeType.PositiveNumericAttribute.toString = $estr;
-doom_html_AttributeType.PositiveNumericAttribute.__enum__ = doom_html_AttributeType;
-doom_html_AttributeType.SideEffectProperty = ["SideEffectProperty",6];
-doom_html_AttributeType.SideEffectProperty.toString = $estr;
-doom_html_AttributeType.SideEffectProperty.__enum__ = doom_html_AttributeType;
-var doom_html_Attributes = function() { };
-doom_html_Attributes.__name__ = ["doom","html","Attributes"];
-doom_html_Attributes.getAttribute = function(el,name) {
-	var tmp;
-	var _this = doom_html_Attributes.properties;
-	if(__map_reserved[name] != null) tmp = _this.getReserved(name); else tmp = _this.h[name];
-	var prop = tmp;
-	if(prop == null) return el.getAttribute(name); else switch(prop[1]) {
-	case 0:case 3:case 4:case 5:
-		return el.getAttribute(name);
-	case 1:case 2:case 6:
-		return Reflect.field(el,name);
-	}
-};
-doom_html_Attributes.setDynamicAttribute = function(el,name,value) {
-	var tmp;
-	var _this = doom_html_Attributes.properties;
-	if(__map_reserved[name] != null) tmp = _this.getReserved(name); else tmp = _this.h[name];
-	var prop = tmp;
-	if(prop == null) el.setAttribute(name,value); else switch(prop[1]) {
-	case 0:case 3:case 4:case 5:
-		el.setAttribute(name,value);
-		break;
-	case 1:case 2:case 6:
-		el[name] = value;
-		break;
-	}
-	return;
-};
-doom_html_Attributes.setStringAttribute = function(el,name,value) {
-	var tmp;
-	var _this = doom_html_Attributes.properties;
-	if(__map_reserved[name] != null) tmp = _this.getReserved(name); else tmp = _this.h[name];
-	var prop = tmp;
-	if(prop == null) el.setAttribute(name,value); else switch(prop[1]) {
-	case 0:case 3:case 4:case 5:
-		el.setAttribute(name,value);
-		break;
-	case 1:case 2:case 6:
-		el[name] = value;
-		break;
-	}
-	return;
-};
-doom_html_Attributes.toggleBoolAttribute = function(el,name,value) {
-	var tmp;
-	var _this = doom_html_Attributes.properties;
-	if(__map_reserved[name] != null) tmp = _this.getReserved(name); else tmp = _this.h[name];
-	var prop = tmp;
-	if(prop == null) {
-		if(value) el.setAttribute(name,name); else el.removeAttribute(name);
-	} else switch(prop[1]) {
-	case 0:case 3:case 4:case 5:
-		if(value) el.setAttribute(name,name); else el.removeAttribute(name);
-		break;
-	case 1:case 2:case 6:
-		el[name] = value;
-		break;
-	}
-	return;
-};
-doom_html_Attributes.removeAttribute = function(el,name) {
-	el.removeAttribute(name);
-};
-var doom_html_Component = function(props,children) {
-	doom_core_Component.call(this,props,children);
-};
-doom_html_Component.__name__ = ["doom","html","Component"];
-doom_html_Component.__super__ = doom_core_Component;
-doom_html_Component.prototype = $extend(doom_core_Component.prototype,{
-	get_element: function() {
-		return this.node;
-	}
-	,__class__: doom_html_Component
-});
-var doom_html__$EventHandler_EventHandler_$Impl_$ = {};
-doom_html__$EventHandler_EventHandler_$Impl_$.__name__ = ["doom","html","_EventHandler","EventHandler_Impl_"];
-doom_html__$EventHandler_EventHandler_$Impl_$.fromElementHandler = function(f) {
-	return function(e) {
-		f(e.target);
-	};
 };
 var doom_html_Render = function(doc,namespaces) {
 	if(null == doc) this.doc = window.document; else this.doc = doc;
@@ -1101,6 +430,681 @@ doom_html_Render.prototype = {
 		return el;
 	}
 	,__class__: doom_html_Render
+};
+var Doom = function() { };
+Doom.__name__ = ["Doom"];
+var EReg = function(r,opt) {
+	opt = opt.split("u").join("");
+	this.r = new RegExp(r,opt);
+};
+EReg.__name__ = ["EReg"];
+EReg.prototype = {
+	r: null
+	,match: function(s) {
+		if(this.r.global) this.r.lastIndex = 0;
+		this.r.m = this.r.exec(s);
+		this.r.s = s;
+		return this.r.m != null;
+	}
+	,matched: function(n) {
+		if(this.r.m != null && n >= 0 && n < this.r.m.length) return this.r.m[n]; else throw new js__$Boot_HaxeError("EReg::matched");
+	}
+	,matchedPos: function() {
+		if(this.r.m == null) throw new js__$Boot_HaxeError("No string matched");
+		return { pos : this.r.m.index, len : this.r.m[0].length};
+	}
+	,matchSub: function(s,pos,len) {
+		if(len == null) len = -1;
+		if(this.r.global) {
+			this.r.lastIndex = pos;
+			this.r.m = this.r.exec(len < 0?s:HxOverrides.substr(s,0,pos + len));
+			var b = this.r.m != null;
+			if(b) this.r.s = s;
+			return b;
+		} else {
+			var b1 = this.match(len < 0?HxOverrides.substr(s,pos,null):HxOverrides.substr(s,pos,len));
+			if(b1) {
+				this.r.s = s;
+				this.r.m.index += pos;
+			}
+			return b1;
+		}
+	}
+	,split: function(s) {
+		var d = "#__delim__#";
+		return s.replace(this.r,d).split(d);
+	}
+	,replace: function(s,by) {
+		return s.replace(this.r,by);
+	}
+	,map: function(s,f) {
+		var offset = 0;
+		var buf_b = "";
+		while(true) {
+			if(offset >= s.length) break; else if(!this.matchSub(s,offset)) {
+				buf_b += Std.string(HxOverrides.substr(s,offset,null));
+				break;
+			}
+			var p = this.matchedPos();
+			buf_b += Std.string(HxOverrides.substr(s,offset,p.pos - offset));
+			buf_b += Std.string(f(this));
+			if(p.len == 0) {
+				buf_b += Std.string(HxOverrides.substr(s,p.pos,1));
+				offset = p.pos + 1;
+			} else offset = p.pos + p.len;
+			if(!this.r.global) break;
+		}
+		if(!this.r.global && offset > 0 && offset < s.length) buf_b += Std.string(HxOverrides.substr(s,offset,null));
+		return buf_b;
+	}
+	,__class__: EReg
+};
+var HxOverrides = function() { };
+HxOverrides.__name__ = ["HxOverrides"];
+HxOverrides.dateStr = function(date) {
+	var m = date.getMonth() + 1;
+	var d = date.getDate();
+	var h = date.getHours();
+	var mi = date.getMinutes();
+	var s = date.getSeconds();
+	return date.getFullYear() + "-" + (m < 10?"0" + m:"" + m) + "-" + (d < 10?"0" + d:"" + d) + " " + (h < 10?"0" + h:"" + h) + ":" + (mi < 10?"0" + mi:"" + mi) + ":" + (s < 10?"0" + s:"" + s);
+};
+HxOverrides.strDate = function(s) {
+	var _g = s.length;
+	switch(_g) {
+	case 8:
+		var k = s.split(":");
+		var d = new Date();
+		d.setTime(0);
+		d.setUTCHours(k[0]);
+		d.setUTCMinutes(k[1]);
+		d.setUTCSeconds(k[2]);
+		return d;
+	case 10:
+		var k1 = s.split("-");
+		return new Date(k1[0],k1[1] - 1,k1[2],0,0,0);
+	case 19:
+		var k2 = s.split(" ");
+		var y = k2[0].split("-");
+		var t = k2[1].split(":");
+		return new Date(y[0],y[1] - 1,y[2],t[0],t[1],t[2]);
+	default:
+		throw new js__$Boot_HaxeError("Invalid date format : " + s);
+	}
+};
+HxOverrides.cca = function(s,index) {
+	var x = s.charCodeAt(index);
+	if(x != x) return undefined;
+	return x;
+};
+HxOverrides.substr = function(s,pos,len) {
+	if(len == null) len = s.length; else if(len < 0) {
+		if(pos == 0) len = s.length + len; else return "";
+	}
+	if(pos < 0) {
+		pos = s.length + pos;
+		if(pos < 0) pos = 0;
+	}
+	return s.substr(pos,len);
+};
+HxOverrides.indexOf = function(a,obj,i) {
+	var len = a.length;
+	if(i < 0) {
+		i += len;
+		if(i < 0) i = 0;
+	}
+	while(i < len) {
+		if(a[i] === obj) return i;
+		i++;
+	}
+	return -1;
+};
+HxOverrides.remove = function(a,obj) {
+	var i = HxOverrides.indexOf(a,obj,0);
+	if(i == -1) return false;
+	a.splice(i,1);
+	return true;
+};
+HxOverrides.iter = function(a) {
+	return { cur : 0, arr : a, hasNext : function() {
+		return this.cur < this.arr.length;
+	}, next : function() {
+		return this.arr[this.cur++];
+	}};
+};
+var Lambda = function() { };
+Lambda.__name__ = ["Lambda"];
+Lambda.has = function(it,elt) {
+	var tmp = $iterator(it)();
+	while(tmp.hasNext()) {
+		var x = tmp.next();
+		if(x == elt) return true;
+	}
+	return false;
+};
+var Main = function() { };
+Main.__name__ = ["Main"];
+Main.main = function() {
+	Doom.browser.mount(doom_core_VNodeImpl.ComponentNode(new svg_SvgApp({ })),dots_Query.find("section.svg"));
+};
+Math.__name__ = ["Math"];
+var Reflect = function() { };
+Reflect.__name__ = ["Reflect"];
+Reflect.field = function(o,field) {
+	try {
+		return o[field];
+	} catch( e ) {
+		haxe_CallStack.lastException = e;
+		return null;
+	}
+};
+Reflect.fields = function(o) {
+	var a = [];
+	if(o != null) {
+		var hasOwnProperty = Object.prototype.hasOwnProperty;
+		for( var f in o ) {
+		if(f != "__id__" && f != "hx__closures__" && hasOwnProperty.call(o,f)) a.push(f);
+		}
+	}
+	return a;
+};
+Reflect.isFunction = function(f) {
+	return typeof(f) == "function" && !(f.__name__ || f.__ename__);
+};
+Reflect.compare = function(a,b) {
+	if(a == b) return 0; else if(a > b) return 1; else return -1;
+};
+Reflect.compareMethods = function(f1,f2) {
+	if(f1 == f2) return true;
+	if(!Reflect.isFunction(f1) || !Reflect.isFunction(f2)) return false;
+	if(f1.scope == f2.scope && f1.method == f2.method) return f1.method != null; else return false;
+};
+Reflect.isObject = function(v) {
+	if(v == null) return false;
+	var t = typeof(v);
+	return t == "string" || t == "object" && v.__enum__ == null || t == "function" && (v.__name__ || v.__ename__) != null;
+};
+Reflect.isEnumValue = function(v) {
+	if(v != null) return v.__enum__ != null; else return false;
+};
+Reflect.deleteField = function(o,field) {
+	if(!Object.prototype.hasOwnProperty.call(o,field)) return false;
+	delete(o[field]);
+	return true;
+};
+var Std = function() { };
+Std.__name__ = ["Std"];
+Std.string = function(s) {
+	return js_Boot.__string_rec(s,"");
+};
+Std.parseInt = function(x) {
+	var v = parseInt(x,10);
+	if(v == 0 && (HxOverrides.cca(x,1) == 120 || HxOverrides.cca(x,1) == 88)) v = parseInt(x);
+	if(isNaN(v)) return null;
+	return v;
+};
+Std.random = function(x) {
+	if(x <= 0) return 0; else return Math.floor(Math.random() * x);
+};
+var StringBuf = function() {
+	this.b = "";
+};
+StringBuf.__name__ = ["StringBuf"];
+StringBuf.prototype = {
+	b: null
+	,__class__: StringBuf
+};
+var StringTools = function() { };
+StringTools.__name__ = ["StringTools"];
+StringTools.startsWith = function(s,start) {
+	if(s.length >= start.length) return HxOverrides.substr(s,0,start.length) == start; else return false;
+};
+StringTools.endsWith = function(s,end) {
+	var elen = end.length;
+	var slen = s.length;
+	if(slen >= elen) return HxOverrides.substr(s,slen - elen,elen) == end; else return false;
+};
+StringTools.isSpace = function(s,pos) {
+	var c = HxOverrides.cca(s,pos);
+	if(!(c > 8 && c < 14)) return c == 32; else return true;
+};
+StringTools.ltrim = function(s) {
+	var l = s.length;
+	var r = 0;
+	while(r < l && StringTools.isSpace(s,r)) ++r;
+	if(r > 0) return HxOverrides.substr(s,r,l - r); else return s;
+};
+StringTools.rtrim = function(s) {
+	var l = s.length;
+	var r = 0;
+	while(r < l && StringTools.isSpace(s,l - r - 1)) ++r;
+	if(r > 0) return HxOverrides.substr(s,0,l - r); else return s;
+};
+StringTools.trim = function(s) {
+	return StringTools.ltrim(StringTools.rtrim(s));
+};
+StringTools.lpad = function(s,c,l) {
+	if(c.length <= 0) return s;
+	while(s.length < l) s = c + s;
+	return s;
+};
+StringTools.rpad = function(s,c,l) {
+	if(c.length <= 0) return s;
+	while(s.length < l) s += c;
+	return s;
+};
+StringTools.replace = function(s,sub,by) {
+	return s.split(sub).join(by);
+};
+var ValueType = { __ename__ : ["ValueType"], __constructs__ : ["TNull","TInt","TFloat","TBool","TObject","TFunction","TClass","TEnum","TUnknown"] };
+ValueType.TNull = ["TNull",0];
+ValueType.TNull.toString = $estr;
+ValueType.TNull.__enum__ = ValueType;
+ValueType.TInt = ["TInt",1];
+ValueType.TInt.toString = $estr;
+ValueType.TInt.__enum__ = ValueType;
+ValueType.TFloat = ["TFloat",2];
+ValueType.TFloat.toString = $estr;
+ValueType.TFloat.__enum__ = ValueType;
+ValueType.TBool = ["TBool",3];
+ValueType.TBool.toString = $estr;
+ValueType.TBool.__enum__ = ValueType;
+ValueType.TObject = ["TObject",4];
+ValueType.TObject.toString = $estr;
+ValueType.TObject.__enum__ = ValueType;
+ValueType.TFunction = ["TFunction",5];
+ValueType.TFunction.toString = $estr;
+ValueType.TFunction.__enum__ = ValueType;
+ValueType.TClass = function(c) { var $x = ["TClass",6,c]; $x.__enum__ = ValueType; $x.toString = $estr; return $x; };
+ValueType.TEnum = function(e) { var $x = ["TEnum",7,e]; $x.__enum__ = ValueType; $x.toString = $estr; return $x; };
+ValueType.TUnknown = ["TUnknown",8];
+ValueType.TUnknown.toString = $estr;
+ValueType.TUnknown.__enum__ = ValueType;
+var Type = function() { };
+Type.__name__ = ["Type"];
+Type.getEnum = function(o) {
+	if(o == null) return null;
+	return o.__enum__;
+};
+Type.getSuperClass = function(c) {
+	return c.__super__;
+};
+Type.getClassName = function(c) {
+	var a = c.__name__;
+	if(a == null) return null;
+	return a.join(".");
+};
+Type.getEnumName = function(e) {
+	var a = e.__ename__;
+	return a.join(".");
+};
+Type.createInstance = function(cl,args) {
+	var _g = args.length;
+	switch(_g) {
+	case 0:
+		return new cl();
+	case 1:
+		return new cl(args[0]);
+	case 2:
+		return new cl(args[0],args[1]);
+	case 3:
+		return new cl(args[0],args[1],args[2]);
+	case 4:
+		return new cl(args[0],args[1],args[2],args[3]);
+	case 5:
+		return new cl(args[0],args[1],args[2],args[3],args[4]);
+	case 6:
+		return new cl(args[0],args[1],args[2],args[3],args[4],args[5]);
+	case 7:
+		return new cl(args[0],args[1],args[2],args[3],args[4],args[5],args[6]);
+	case 8:
+		return new cl(args[0],args[1],args[2],args[3],args[4],args[5],args[6],args[7]);
+	default:
+		throw new js__$Boot_HaxeError("Too many arguments");
+	}
+	return null;
+};
+Type.createEmptyInstance = function(cl) {
+	function empty() {}; empty.prototype = cl.prototype;
+	return new empty();
+};
+Type.getInstanceFields = function(c) {
+	var a = [];
+	for(var i in c.prototype) a.push(i);
+	HxOverrides.remove(a,"__class__");
+	HxOverrides.remove(a,"__properties__");
+	return a;
+};
+Type["typeof"] = function(v) {
+	var _g = typeof(v);
+	switch(_g) {
+	case "boolean":
+		return ValueType.TBool;
+	case "string":
+		return ValueType.TClass(String);
+	case "number":
+		if(Math.ceil(v) == v % 2147483648.0) return ValueType.TInt;
+		return ValueType.TFloat;
+	case "object":
+		if(v == null) return ValueType.TNull;
+		var e = v.__enum__;
+		if(e != null) return ValueType.TEnum(e);
+		var c = js_Boot.getClass(v);
+		if(c != null) return ValueType.TClass(c);
+		return ValueType.TObject;
+	case "function":
+		if(v.__name__ || v.__ename__) return ValueType.TObject;
+		return ValueType.TFunction;
+	case "undefined":
+		return ValueType.TNull;
+	default:
+		return ValueType.TUnknown;
+	}
+};
+var doom_core__$AttributeValue_AttributeValue_$Impl_$ = {};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.__name__ = ["doom","core","_AttributeValue","AttributeValue_Impl_"];
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString = function(s) {
+	return doom_core_AttributeValueImpl.StringAttribute(s);
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromMap = function(map) {
+	var values = [];
+	var tmp = map.keys();
+	while(tmp.hasNext()) {
+		var key = tmp.next();
+		if(__map_reserved[key] != null?map.getReserved(key):map.h[key]) values.push(key);
+	}
+	return doom_core_AttributeValueImpl.StringAttribute(values.join(" "));
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromBool = function(b) {
+	return doom_core_AttributeValueImpl.BoolAttribute(b);
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromHandler = function(f) {
+	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(function(e) {
+		e.preventDefault();
+		f();
+	});
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromEventHandler = function(f) {
+	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(f);
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromElementHandler = function(f) {
+	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(function(e) {
+		e.preventDefault();
+		var input = e.target;
+		f(input);
+	});
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromStringValueHandler = function(f) {
+	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(function(e) {
+		e.preventDefault();
+		var value = dots_Dom.getValue(e.target);
+		f(value);
+	});
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromBoolValueHandler = function(f) {
+	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core_AttributeValueImpl.EventAttribute(function(e) {
+		e.preventDefault();
+		var value = e.target.checked;
+		f(value);
+	});
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromIntValueHandler = function(f) {
+	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core__$AttributeValue_AttributeValue_$Impl_$.fromStringValueHandler(function(s) {
+		if(thx_Ints.canParse(s)) f(thx_Ints.parse(s));
+	});
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.fromFloatValueHandler = function(f) {
+	if(null == f) return doom_core_AttributeValueImpl.BoolAttribute(false); else return doom_core__$AttributeValue_AttributeValue_$Impl_$.fromStringValueHandler(function(s) {
+		if(thx_Floats.canParse(s)) f(thx_Floats.parse(s));
+	});
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.toString = function(this1) {
+	var a = this1;
+	switch(this1[1]) {
+	case 1:
+		var s = this1[2];
+		return s;
+	default:
+		throw new thx_Error("cannot convert attribute " + Std.string(a) + " to string",null,{ fileName : "AttributeValue.hx", lineNumber : 67, className : "doom.core._AttributeValue.AttributeValue_Impl_", methodName : "toString"});
+	}
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.equalsTo = function(this1,that) {
+	if(this1 == null) return false; else switch(this1[1]) {
+	case 0:
+		if(that == null) return false; else switch(that[1]) {
+		case 0:
+			var a = this1[2];
+			var b = that[2];
+			return a == b;
+		default:
+			return false;
+		}
+		break;
+	case 1:
+		if(that == null) return false; else switch(that[1]) {
+		case 1:
+			var a1 = this1[2];
+			var b1 = that[2];
+			return a1 == b1;
+		default:
+			return false;
+		}
+		break;
+	default:
+		if(that == null) return false; else switch(that[1]) {
+		default:
+			return false;
+		}
+	}
+};
+doom_core__$AttributeValue_AttributeValue_$Impl_$.notEqualsTo = function(this1,that) {
+	return !doom_core__$AttributeValue_AttributeValue_$Impl_$.equalsTo(this1,that);
+};
+var doom_core_AttributeValueImpl = { __ename__ : ["doom","core","AttributeValueImpl"], __constructs__ : ["BoolAttribute","StringAttribute","EventAttribute"] };
+doom_core_AttributeValueImpl.BoolAttribute = function(b) { var $x = ["BoolAttribute",0,b]; $x.__enum__ = doom_core_AttributeValueImpl; $x.toString = $estr; return $x; };
+doom_core_AttributeValueImpl.StringAttribute = function(s) { var $x = ["StringAttribute",1,s]; $x.__enum__ = doom_core_AttributeValueImpl; $x.toString = $estr; return $x; };
+doom_core_AttributeValueImpl.EventAttribute = function(f) { var $x = ["EventAttribute",2,f]; $x.__enum__ = doom_core_AttributeValueImpl; $x.toString = $estr; return $x; };
+var doom_core_Component = function(props,children) {
+	this.isUnmounted = false;
+	this.props = props;
+	this.children = children;
+};
+doom_core_Component.__name__ = ["doom","core","Component"];
+doom_core_Component.prototype = {
+	props: null
+	,children: null
+	,node: null
+	,isUnmounted: null
+	,apply: null
+	,render: function() {
+		throw new thx_error_AbstractMethod({ fileName : "Component.hx", lineNumber : 16, className : "doom.core.Component", methodName : "render"});
+	}
+	,asNode: function() {
+		return doom_core_VNodeImpl.ComponentNode(this);
+	}
+	,update: function(props) {
+		var old = this.props;
+		this.props = props;
+		if(!this.shouldUpdate(old,props) || !this.shouldRender()) return;
+		this.apply(doom_core_VNodeImpl.ComponentNode(this),this.node);
+	}
+	,shouldUpdate: function(oldProps,newProps) {
+		return true;
+	}
+	,shouldRender: function() {
+		return !this.isUnmounted;
+	}
+	,migrationFields: function() {
+		return ["props","update"];
+	}
+	,didMount: function() {
+	}
+	,willMount: function() {
+	}
+	,willUpdate: function() {
+	}
+	,didUpdate: function() {
+	}
+	,didUnmount: function() {
+	}
+	,willUnmount: function() {
+	}
+	,__class__: doom_core_Component
+};
+var doom_core__$VNode_VNode_$Impl_$ = {};
+doom_core__$VNode_VNode_$Impl_$.__name__ = ["doom","core","_VNode","VNode_Impl_"];
+doom_core__$VNode_VNode_$Impl_$.text = function(s) {
+	return doom_core_VNodeImpl.Text(s);
+};
+doom_core__$VNode_VNode_$Impl_$.comp = function(comp) {
+	return doom_core_VNodeImpl.ComponentNode(comp);
+};
+doom_core__$VNode_VNode_$Impl_$.raw = function(content) {
+	return doom_core_VNodeImpl.Raw(content);
+};
+doom_core__$VNode_VNode_$Impl_$.comment = function(content) {
+	return doom_core_VNodeImpl.Comment(content);
+};
+doom_core__$VNode_VNode_$Impl_$.el = function(name,attributes,children) {
+	if(null == attributes) attributes = new haxe_ds_StringMap();
+	if(null == children) children = [];
+	return doom_core_VNodeImpl.Element(name,attributes,children);
+};
+var doom_core_VNodeImpl = { __ename__ : ["doom","core","VNodeImpl"], __constructs__ : ["Element","Comment","Raw","Text","ComponentNode"] };
+doom_core_VNodeImpl.Element = function(name,attributes,children) { var $x = ["Element",0,name,attributes,children]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
+doom_core_VNodeImpl.Comment = function(comment) { var $x = ["Comment",1,comment]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
+doom_core_VNodeImpl.Raw = function(code) { var $x = ["Raw",2,code]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
+doom_core_VNodeImpl.Text = function(text) { var $x = ["Text",3,text]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
+doom_core_VNodeImpl.ComponentNode = function(comp) { var $x = ["ComponentNode",4,comp]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
+var doom_core__$VNodes_VNodes_$Impl_$ = {};
+doom_core__$VNodes_VNodes_$Impl_$.__name__ = ["doom","core","_VNodes","VNodes_Impl_"];
+doom_core__$VNodes_VNodes_$Impl_$.node = function(node) {
+	return [node];
+};
+doom_core__$VNodes_VNodes_$Impl_$.nodeImpl = function(node) {
+	return [node];
+};
+doom_core__$VNodes_VNodes_$Impl_$.nodesImpl = function(nodes) {
+	return nodes;
+};
+doom_core__$VNodes_VNodes_$Impl_$.comps = function(comps) {
+	return comps.map(doom_core__$VNode_VNode_$Impl_$.comp);
+};
+doom_core__$VNodes_VNodes_$Impl_$.comment = function(content) {
+	return [doom_core_VNodeImpl.Comment(content)];
+};
+doom_core__$VNodes_VNodes_$Impl_$.text = function(content) {
+	return [doom_core_VNodeImpl.Text(content)];
+};
+doom_core__$VNodes_VNodes_$Impl_$.texts = function(contents) {
+	return contents.map(doom_core__$VNode_VNode_$Impl_$.text);
+};
+doom_core__$VNodes_VNodes_$Impl_$.comp = function(comp) {
+	return [doom_core_VNodeImpl.ComponentNode(comp)];
+};
+var doom_html_AttributeType = { __ename__ : ["doom","html","AttributeType"], __constructs__ : ["BooleanAttribute","Property","BooleanProperty","OverloadedBooleanAttribute","NumericAttribute","PositiveNumericAttribute","SideEffectProperty"] };
+doom_html_AttributeType.BooleanAttribute = ["BooleanAttribute",0];
+doom_html_AttributeType.BooleanAttribute.toString = $estr;
+doom_html_AttributeType.BooleanAttribute.__enum__ = doom_html_AttributeType;
+doom_html_AttributeType.Property = ["Property",1];
+doom_html_AttributeType.Property.toString = $estr;
+doom_html_AttributeType.Property.__enum__ = doom_html_AttributeType;
+doom_html_AttributeType.BooleanProperty = ["BooleanProperty",2];
+doom_html_AttributeType.BooleanProperty.toString = $estr;
+doom_html_AttributeType.BooleanProperty.__enum__ = doom_html_AttributeType;
+doom_html_AttributeType.OverloadedBooleanAttribute = ["OverloadedBooleanAttribute",3];
+doom_html_AttributeType.OverloadedBooleanAttribute.toString = $estr;
+doom_html_AttributeType.OverloadedBooleanAttribute.__enum__ = doom_html_AttributeType;
+doom_html_AttributeType.NumericAttribute = ["NumericAttribute",4];
+doom_html_AttributeType.NumericAttribute.toString = $estr;
+doom_html_AttributeType.NumericAttribute.__enum__ = doom_html_AttributeType;
+doom_html_AttributeType.PositiveNumericAttribute = ["PositiveNumericAttribute",5];
+doom_html_AttributeType.PositiveNumericAttribute.toString = $estr;
+doom_html_AttributeType.PositiveNumericAttribute.__enum__ = doom_html_AttributeType;
+doom_html_AttributeType.SideEffectProperty = ["SideEffectProperty",6];
+doom_html_AttributeType.SideEffectProperty.toString = $estr;
+doom_html_AttributeType.SideEffectProperty.__enum__ = doom_html_AttributeType;
+var doom_html_Attributes = function() { };
+doom_html_Attributes.__name__ = ["doom","html","Attributes"];
+doom_html_Attributes.getAttribute = function(el,name) {
+	var tmp;
+	var _this = doom_html_Attributes.properties;
+	if(__map_reserved[name] != null) tmp = _this.getReserved(name); else tmp = _this.h[name];
+	var prop = tmp;
+	if(prop == null) return el.getAttribute(name); else switch(prop[1]) {
+	case 0:case 3:case 4:case 5:
+		return el.getAttribute(name);
+	case 1:case 2:case 6:
+		return Reflect.field(el,name);
+	}
+};
+doom_html_Attributes.setDynamicAttribute = function(el,name,value) {
+	var tmp;
+	var _this = doom_html_Attributes.properties;
+	if(__map_reserved[name] != null) tmp = _this.getReserved(name); else tmp = _this.h[name];
+	var prop = tmp;
+	if(prop == null) el.setAttribute(name,value); else switch(prop[1]) {
+	case 0:case 3:case 4:case 5:
+		el.setAttribute(name,value);
+		break;
+	case 1:case 2:case 6:
+		el[name] = value;
+		break;
+	}
+	return;
+};
+doom_html_Attributes.setStringAttribute = function(el,name,value) {
+	var tmp;
+	var _this = doom_html_Attributes.properties;
+	if(__map_reserved[name] != null) tmp = _this.getReserved(name); else tmp = _this.h[name];
+	var prop = tmp;
+	if(prop == null) el.setAttribute(name,value); else switch(prop[1]) {
+	case 0:case 3:case 4:case 5:
+		el.setAttribute(name,value);
+		break;
+	case 1:case 2:case 6:
+		el[name] = value;
+		break;
+	}
+	return;
+};
+doom_html_Attributes.toggleBoolAttribute = function(el,name,value) {
+	var tmp;
+	var _this = doom_html_Attributes.properties;
+	if(__map_reserved[name] != null) tmp = _this.getReserved(name); else tmp = _this.h[name];
+	var prop = tmp;
+	if(prop == null) {
+		if(value) el.setAttribute(name,name); else el.removeAttribute(name);
+	} else switch(prop[1]) {
+	case 0:case 3:case 4:case 5:
+		if(value) el.setAttribute(name,name); else el.removeAttribute(name);
+		break;
+	case 1:case 2:case 6:
+		el[name] = value;
+		break;
+	}
+	return;
+};
+doom_html_Attributes.removeAttribute = function(el,name) {
+	el.removeAttribute(name);
+};
+var doom_html_Component = function(props,children) {
+	doom_core_Component.call(this,props,children);
+};
+doom_html_Component.__name__ = ["doom","html","Component"];
+doom_html_Component.__super__ = doom_core_Component;
+doom_html_Component.prototype = $extend(doom_core_Component.prototype,{
+	get_element: function() {
+		return this.node;
+	}
+	,__class__: doom_html_Component
+});
+var doom_html__$EventHandler_EventHandler_$Impl_$ = {};
+doom_html__$EventHandler_EventHandler_$Impl_$.__name__ = ["doom","html","_EventHandler","EventHandler_Impl_"];
+doom_html__$EventHandler_EventHandler_$Impl_$.fromElementHandler = function(f) {
+	return function(e) {
+		f(e.target);
+	};
 };
 var doom_html_Svg = function() { };
 doom_html_Svg.__name__ = ["doom","html","Svg"];
@@ -6720,6 +6724,14 @@ var Uint8Array = $global.Uint8Array || js_html_compat_Uint8Array._new;
       }
     ;
 DateTools.DAYS_OF_MONTH = [31,28,31,30,31,30,31,31,30,31,30,31];
+doom_html_Render.defaultNamespaces = (function($this) {
+	var $r;
+	var _g = new haxe_ds_StringMap();
+	if(__map_reserved.svg != null) _g.setReserved("svg","http://www.w3.org/2000/svg"); else _g.h["svg"] = "http://www.w3.org/2000/svg";
+	$r = _g;
+	return $r;
+}(this));
+Doom.browser = new doom_html_Render();
 doom_html_Attributes.properties = (function($this) {
 	var $r;
 	var _g = new haxe_ds_StringMap();
@@ -6851,13 +6863,6 @@ doom_html_Attributes.properties = (function($this) {
 		var value31 = doom_html_AttributeType.BooleanAttribute;
 		if(__map_reserved.itemScope != null) _g.setReserved("itemScope",value31); else _g.h["itemScope"] = value31;
 	}
-	$r = _g;
-	return $r;
-}(this));
-doom_html_Render.defaultNamespaces = (function($this) {
-	var $r;
-	var _g = new haxe_ds_StringMap();
-	if(__map_reserved.svg != null) _g.setReserved("svg","http://www.w3.org/2000/svg"); else _g.h["svg"] = "http://www.w3.org/2000/svg";
 	$r = _g;
 	return $r;
 }(this));

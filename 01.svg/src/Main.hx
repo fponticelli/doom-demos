@@ -3,8 +3,7 @@ import svg.SvgApp;
 
 class Main {
   static function main() {
-    var doom = new doom.html.Render();
-    doom.mount(
+    Doom.browser.mount(
       new SvgApp({}),
       Query.find("section.svg")
     );
