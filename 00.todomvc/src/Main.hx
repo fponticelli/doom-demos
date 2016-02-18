@@ -37,8 +37,7 @@ class Main {
     });
 
     // init app
-    var render = new doom.html.Render();
-    render.mount(
+    Doom.browser.mount(
       new App(store),
       Query.find("section.todoapp")
     );
