@@ -1,14 +1,13 @@
 package fs;
 
-import Doom.*;
-import doom.Component;
-import haxe.ds.Option;
+import doom.html.Html.*;
+import doom.html.Component;
 
-class CookingComponent extends Component<String, String> {
+class CookingComponent extends Component<{ header : String, time : String }> {
   override function render() {
     return tr([
-            th(api),
-            td([state, " min."])
+            th(props.header),
+            td([props.time, " min."])
           ]);
   }
 }
