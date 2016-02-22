@@ -1,35 +1,39 @@
 package todomvc.view;
 
-import Doom.*;
-import doom.Component;
+import doom.html.Html.*;
+import doom.html.Component;
 import lies.Store;
-import thx.ReadonlyArray;
 import todomvc.data.AppState;
 import todomvc.data.TodoAction;
 import todomvc.data.VisibilityFilter;
+using thx.Objects;
 
-class App extends Component<Store<AppState, TodoAction>, {}> {
+class App extends Component<Store<AppState, TodoAction>> {
   override function render() {
-    var header = new Header({
-          add : function(text) api.dispatch(Add(text))
-        }, {}),
-        body = new Body({
-          setFilter : function(filter : VisibilityFilter)
-            api.dispatch(SetVisibilityFilter(filter)),
-          clearCompleted : function()
-            api.dispatch(ClearCompleted),
-          remove : function(id : String)
-            api.dispatch(Remove(id)),
-          toggle : function(id : String)
-            api.dispatch(Toggle(id)),
-          toggleAll : function()
-            api.dispatch(ToggleAll),
-          updateText : function(id : String, text : String)
-            api.dispatch(UpdateText(id, text)),
-        }, api.state);
-    api.subscribe(function() {
-      body.update(api.state);
+    var bodyProps = {
+          api : {
+            setFilter : function(filter : VisibilityFilter)
+              props.dispatch(SetVisibilityFilter(filter)),
+            clearCompleted : function()
+              props.dispatch(ClearCompleted),
+            remove : function(id : String)
+              props.dispatch(Remove(id)),
+            toggle : function(id : String)
+              props.dispatch(Toggle(id)),
+            toggleAll : function()
+              props.dispatch(ToggleAll),
+            updateText : function(id : String, text : String)
+              props.dispatch(UpdateText(id, text))
+          },
+          state : props.state
+        },
+        header = new Header({
+          add : function(text) props.dispatch(Add(text))
+        }),
+        body = new Body(bodyProps);
+    props.subscribe(function() {
+      body.update(bodyProps.merge({ state : props.state }));
     });
-    return div([header, body]);
+    return div([header.asNode(), body.asNode()]);
   }
 }

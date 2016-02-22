@@ -1,9 +1,9 @@
 package svg;
 
-import doom.Svg.*;
-import doom.Component;
+import doom.html.Svg.*;
+import doom.html.Component;
 
-class SvgApp extends Component<{}, {}> {
+class SvgApp extends Component<{}> {
   override function render() {
     return svg([
         "width" => "230",

@@ -1,21 +1,18 @@
 package fs;
 
-import Doom.*;
-import doom.Component;
+import doom.html.Html.*;
+import doom.html.Component;
 
-class App extends Component<AppApi, AppState> {
-  public function new(api : AppApi, state : AppState) {
-    super(api, state);
-    api.onUpdate = function() {
-      update(api.state);
-    };
-    thx.Timer.immediate(api.load);
-  }
-
+class App extends Component<AppProps> {
   override function render() {
     return div(["class" => "fancy-container"], [
       h1("veggies cooking time"),
-      comp(new SearchItem({}, state))
+      comp(new SearchItem(props.state))
     ]);
+  }
+
+  override function didMount() {
+    props.onUpdate = function() update(props);
+    props.load();
   }
 }

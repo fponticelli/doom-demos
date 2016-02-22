@@ -1,12 +1,13 @@
 package todomvc.view;
 
-import doom.Component;
+import doom.html.Html.*;
+import doom.html.Component;
 import dots.Keys;
-import Doom.*;
-import js.html.*;
+import js.html.InputElement;
+import js.html.KeyboardEvent;
 using thx.Strings;
 
-class Header extends Component<AddItemApi, {}> {
+class Header extends Component<AddItemApi> {
   override function render()
     return header([
         "class" => "header"
@@ -25,7 +26,7 @@ class Header extends Component<AddItemApi, {}> {
       e.preventDefault();
       var value = getInputValueAndEmpty();
       if(value.isEmpty()) return;
-      api.add(value);
+      props.add(value);
     }
   }
 
