@@ -56,7 +56,7 @@ doom_html_Render.prototype = {
 	,mount: function(node,parent) {
 		parent.innerHTML = "";
 		var post = [];
-		var n = this.generate(node);
+		var n = this.generateNode(node,post);
 		parent.appendChild(n);
 		var _g = 0;
 		while(_g < post.length) {
@@ -174,7 +174,7 @@ doom_html_Render.prototype = {
 				oldComp.willUpdate();
 				post.push($bind(oldComp,oldComp.didUpdate));
 				if(oldComp.shouldRender()) {
-					var node = oldComp.render();
+					var node = this.renderComponent(oldComp);
 					return this.applyToNode(node,dom,parent,post,false);
 				} else return dom;
 			} else {
@@ -183,7 +183,7 @@ doom_html_Render.prototype = {
 				this.componentToNode.remove(oldComp);
 				this.componentToNode.set(newComp,dom);
 				newComp.willMount();
-				var node1 = newComp.render();
+				var node1 = this.renderComponent(newComp);
 				newComp.apply = $bind(this,this.apply);
 				var dom1 = this.applyToNode(node1,dom,parent,post,false);
 				newComp.node = dom1;
@@ -199,7 +199,7 @@ doom_html_Render.prototype = {
 			}
 		} else {
 			newComp.willMount();
-			var node2 = newComp.render();
+			var node2 = this.renderComponent(newComp);
 			newComp.apply = $bind(this,this.apply);
 			var dom2 = this.applyToNode(node2,dom,parent,post,false);
 			newComp.node = dom2;
@@ -215,6 +215,18 @@ doom_html_Render.prototype = {
 		var comp = this.nodeToComponent.h[dom.__id__];
 		if(null == comp) return;
 		this.unmountComponent(comp);
+	}
+	,renderComponent: function(comp) {
+		var _g = comp.render();
+		var other = _g;
+		switch(_g[1]) {
+		case 4:
+			var c = _g[2];
+			throw new thx_Error("Component " + thx_Types.toString(Type["typeof"](comp)) + " should not return another component (" + thx_Types.toString(Type["typeof"](c)) + ") directly",null,{ fileName : "Render.hx", lineNumber : 216, className : "doom.html.Render", methodName : "renderComponent"});
+			break;
+		default:
+			return other;
+		}
 	}
 	,unmountComponent: function(comp) {
 		var node = this.componentToNode.h[comp.__id__];
@@ -395,7 +407,7 @@ doom_html_Render.prototype = {
 		case 4:
 			var comp = node[2];
 			comp.willMount();
-			var node1 = comp.render();
+			var node1 = this.renderComponent(comp);
 			var dom = this.generateNode(node1,post);
 			comp.node = dom;
 			comp.apply = $bind(this,this.apply);
@@ -417,7 +429,7 @@ doom_html_Render.prototype = {
 			var _this = this.namespaces;
 			if(__map_reserved[prefix] != null) tmp = _this.getReserved(prefix); else tmp = _this.h[prefix];
 			var ns = tmp;
-			if(null == ns) throw new thx_Error("element prefix \"" + prefix + "\" is not associated to any namespace. Add the right namespace to Doom.namespaces.",null,{ fileName : "Render.hx", lineNumber : 344, className : "doom.html.Render", methodName : "createElement"});
+			if(null == ns) throw new thx_Error("element prefix \"" + prefix + "\" is not associated to any namespace. Add the right namespace to Doom.namespaces.",null,{ fileName : "Render.hx", lineNumber : 360, className : "doom.html.Render", methodName : "createElement"});
 			el = this.doc.createElementNS(ns,name1);
 		} else el = this.doc.createElement(name);
 		this.applyNodeAttributes(attributes,el);
@@ -984,11 +996,11 @@ doom_core__$VNodes_VNodes_$Impl_$.node = function(node) {
 doom_core__$VNodes_VNodes_$Impl_$.nodeImpl = function(node) {
 	return [node];
 };
-doom_core__$VNodes_VNodes_$Impl_$.nodesImpl = function(nodes) {
-	return nodes;
-};
 doom_core__$VNodes_VNodes_$Impl_$.comps = function(comps) {
 	return comps.map(doom_core__$VNode_VNode_$Impl_$.comp);
+};
+doom_core__$VNodes_VNodes_$Impl_$.nodesImpl = function(nodes) {
+	return nodes;
 };
 doom_core__$VNodes_VNodes_$Impl_$.comment = function(content) {
 	return [doom_core_VNodeImpl.Comment(content)];
