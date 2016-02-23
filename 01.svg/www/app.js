@@ -56,7 +56,7 @@ doom_html_Render.prototype = {
 	,mount: function(node,parent) {
 		parent.innerHTML = "";
 		var post = [];
-		var n = this.generateNode(node,post);
+		var n = this.generateVChildDom(node,post);
 		parent.appendChild(n);
 		var _g = 0;
 		while(_g < post.length) {
@@ -67,7 +67,7 @@ doom_html_Render.prototype = {
 	}
 	,apply: function(node,dom) {
 		var post = [];
-		this.applyToNode(node,dom,dom.parentElement,post,false);
+		this.applyVChildToNode(node,dom,dom.parentElement,post,false);
 		var _g = 0;
 		while(_g < post.length) {
 			var f = post[_g];
@@ -77,7 +77,7 @@ doom_html_Render.prototype = {
 	}
 	,generate: function(node) {
 		var post = [];
-		var dom = this.generateNode(node,post);
+		var dom = this.generateDom(node,post);
 		var _g = 0;
 		while(_g < post.length) {
 			var f = post[_g];
@@ -86,13 +86,32 @@ doom_html_Render.prototype = {
 		}
 		return dom;
 	}
+	,applyVChildToNode: function(node,dom,parent,post,tryUnmount) {
+		if(null == node && null == dom) return null; else if(null == node) {
+			if(tryUnmount) this.unmountDomComponent(dom);
+			parent.removeChild(dom);
+			return null;
+		} else if(null == dom) {
+			var el = this.generateVChildDom(node,post);
+			parent.appendChild(el);
+			return el;
+		}
+		switch(node[1]) {
+		case 0:
+			var n = node[2];
+			return this.applyToNode(n,dom,parent,post,tryUnmount);
+		case 1:
+			var comp = node[2];
+			return this.applyComponentToNode(comp,dom,parent,post);
+		}
+	}
 	,applyToNode: function(node,dom,parent,post,tryUnmount) {
 		if(null == node && null == dom) return null; else if(null == node) {
 			if(tryUnmount) this.unmountDomComponent(dom);
 			parent.removeChild(dom);
 			return null;
 		} else if(null == dom) {
-			var el = this.generateNode(node,post);
+			var el = this.generateDom(node,post);
 			parent.appendChild(el);
 			return el;
 		}
@@ -116,9 +135,6 @@ doom_html_Render.prototype = {
 			var text = node[2];
 			if(tryUnmount) this.unmountDomComponent(dom);
 			return this.applyTextToNode(text,dom,parent,post);
-		case 4:
-			var comp = node[2];
-			return this.applyComponentToNode(comp,dom,parent,post);
 		}
 	}
 	,applyNodeToNode: function(srcDom,dstDom,parent,tryUnmount) {
@@ -217,16 +233,7 @@ doom_html_Render.prototype = {
 		this.unmountComponent(comp);
 	}
 	,renderComponent: function(comp) {
-		var _g = comp.render();
-		var other = _g;
-		switch(_g[1]) {
-		case 4:
-			var c = _g[2];
-			throw new thx_Error("Component " + thx_Types.toString(Type["typeof"](comp)) + " should not return another component (" + thx_Types.toString(Type["typeof"](c)) + ") directly",null,{ fileName : "Render.hx", lineNumber : 216, className : "doom.html.Render", methodName : "renderComponent"});
-			break;
-		default:
-			return other;
-		}
+		return comp.render();
 	}
 	,unmountComponent: function(comp) {
 		var node = this.componentToNode.h[comp.__id__];
@@ -241,8 +248,8 @@ doom_html_Render.prototype = {
 		var _g = this;
 		if(dom.nodeType == 1 && dom.tagName == name.toUpperCase()) {
 			this.applyNodeAttributes(attributes,dom);
-			thx_Arrays.each(this.zipVNodesAndNodeList(children,dom.childNodes),function(t) {
-				_g.applyToNode(t._0,t._1,dom,post,true);
+			thx_Arrays.each(this.zipVChildrenAndNodeList(children,dom.childNodes),function(t) {
+				_g.applyVChildToNode(t._0,t._1,dom,post,true);
 			});
 			return dom;
 		} else {
@@ -273,16 +280,18 @@ doom_html_Render.prototype = {
 		parent.replaceChild(newDom,oldDom);
 		return newDom;
 	}
-	,zipVNodesAndNodeList: function(vnodes,children) {
+	,zipVChildrenAndNodeList: function(vnodes,children) {
 		var len;
 		var a = vnodes.length;
 		var b = children.length;
 		if(a > b) len = a; else len = b;
 		var _g = [];
-		var _g1 = 0;
-		while(_g1 < len) {
-			var i = _g1++;
-			_g.push({ _0 : vnodes[i], _1 : children[i]});
+		var _g2 = 0;
+		var _g1 = len;
+		while(_g2 < _g1) {
+			var i = _g2++;
+			var this1 = { _0 : vnodes[i], _1 : children[i]};
+			_g.push(this1);
 		}
 		return _g;
 	}
@@ -292,10 +301,12 @@ doom_html_Render.prototype = {
 		var b = right.length;
 		if(a > b) len = a; else len = b;
 		var _g = [];
-		var _g1 = 0;
-		while(_g1 < len) {
-			var i = _g1++;
-			_g.push({ _0 : left[i], _1 : right[i]});
+		var _g2 = 0;
+		var _g1 = len;
+		while(_g2 < _g1) {
+			var i = _g2++;
+			var this1 = { _0 : left[i], _1 : right[i]};
+			_g.push(this1);
 		}
 		return _g;
 	}
@@ -330,11 +341,11 @@ doom_html_Render.prototype = {
 		}
 		var tmp2 = $iterator(thx__$Set_Set_$Impl_$)(srcAttrs);
 		while(tmp2.hasNext()) {
-			var key1 = tmp2.next();
-			var srcValue = doom_html_Attributes.getAttribute(srcDom,key1);
-			var dstValue = doom_html_Attributes.getAttribute(dstDom,key1);
+			var key2 = tmp2.next();
+			var srcValue = doom_html_Attributes.getAttribute(srcDom,key2);
+			var dstValue = doom_html_Attributes.getAttribute(dstDom,key2);
 			if(srcValue == dstValue) continue;
-			doom_html_Attributes.setDynamicAttribute(dstDom,key1,srcValue);
+			doom_html_Attributes.setDynamicAttribute(dstDom,key2,srcValue);
 		}
 	}
 	,applyNodeAttributes: function(attributes,dom) {
@@ -362,33 +373,53 @@ doom_html_Render.prototype = {
 		var removed = result;
 		var tmp2 = $iterator(thx__$Set_Set_$Impl_$)(removed);
 		while(tmp2.hasNext()) {
-			var key1 = tmp2.next();
-			dom.removeAttribute(key1);
+			var key2 = tmp2.next();
+			dom.removeAttribute(key2);
 		}
 		var tmp3 = $iterator(thx__$Set_Set_$Impl_$)(vdomAttrs);
 		while(tmp3.hasNext()) {
-			var key2 = tmp3.next();
-			var _g21 = __map_reserved[key2] != null?attributes.getReserved(key2):attributes.h[key2];
-			if(_g21 == null) doom_html_Attributes.removeAttribute(dom,key2); else switch(_g21[1]) {
+			var key3 = tmp3.next();
+			var _g23 = __map_reserved[key3] != null?attributes.getReserved(key3):attributes.h[key3];
+			if(_g23 == null) doom_html_Attributes.removeAttribute(dom,key3); else switch(_g23[1]) {
 			case 1:
-				var s = _g21[2];
-				if(null == s || s == "") doom_html_Attributes.removeAttribute(dom,key2); else {
-					var s1 = _g21[2];
-					doom_html_Attributes.setStringAttribute(dom,key2,s1);
+				var s = _g23[2];
+				if(null == s || s == "") doom_html_Attributes.removeAttribute(dom,key3); else {
+					var s3 = _g23[2];
+					doom_html_Attributes.setStringAttribute(dom,key3,s3);
 				}
 				break;
 			case 0:
-				var b = _g21[2];
-				doom_html_Attributes.toggleBoolAttribute(dom,key2,b);
+				var b = _g23[2];
+				doom_html_Attributes.toggleBoolAttribute(dom,key3,b);
 				break;
 			case 2:
-				var e = _g21[2];
-				doom_html_Render.setEvent(dom,key2,e);
+				var e = _g23[2];
+				doom_html_Render.setEvent(dom,key3,e);
 				break;
 			}
 		}
 	}
-	,generateNode: function(node,post) {
+	,generateVChildDom: function(node,post) {
+		switch(node[1]) {
+		case 0:
+			var n = node[2];
+			return this.generateDom(n,post);
+		case 1:
+			var comp = node[2];
+			comp.willMount();
+			var node1 = this.renderComponent(comp);
+			var dom = this.generateDom(node1,post);
+			comp.node = dom;
+			comp.apply = $bind(this,this.apply);
+			post.splice(0,0,function() {
+				comp.didMount();
+			});
+			this.nodeToComponent.set(dom,comp);
+			this.componentToNode.set(comp,dom);
+			return dom;
+		}
+	}
+	,generateDom: function(node,post) {
 		switch(node[1]) {
 		case 0:
 			var children = node[4];
@@ -404,19 +435,6 @@ doom_html_Render.prototype = {
 		case 3:
 			var text = node[2];
 			return this.doc.createTextNode(text);
-		case 4:
-			var comp = node[2];
-			comp.willMount();
-			var node1 = this.renderComponent(comp);
-			var dom = this.generateNode(node1,post);
-			comp.node = dom;
-			comp.apply = $bind(this,this.apply);
-			post.splice(0,0,function() {
-				comp.didMount();
-			});
-			this.nodeToComponent.set(dom,comp);
-			this.componentToNode.set(comp,dom);
-			return dom;
 		}
 	}
 	,createElement: function(name,attributes,children,post) {
@@ -429,14 +447,15 @@ doom_html_Render.prototype = {
 			var _this = this.namespaces;
 			if(__map_reserved[prefix] != null) tmp = _this.getReserved(prefix); else tmp = _this.h[prefix];
 			var ns = tmp;
-			if(null == ns) throw new thx_Error("element prefix \"" + prefix + "\" is not associated to any namespace. Add the right namespace to Doom.namespaces.",null,{ fileName : "Render.hx", lineNumber : 360, className : "doom.html.Render", methodName : "createElement"});
+			if(null == ns) throw new thx_Error("element prefix \"" + prefix + "\" is not associated to any namespace. Add the right namespace to Doom.namespaces.",null,{ fileName : "Render.hx", lineNumber : 381, className : "doom.html.Render", methodName : "createElement"});
 			el = this.doc.createElementNS(ns,name1);
 		} else el = this.doc.createElement(name);
 		this.applyNodeAttributes(attributes,el);
 		var tmp1 = HxOverrides.iter(children);
 		while(tmp1.hasNext()) {
 			var child = tmp1.next();
-			var n = this.generateNode(child,post);
+			if(null == child) continue;
+			var n = this.generateVChildDom(child,post);
 			el.appendChild(n);
 		}
 		return el;
@@ -597,7 +616,7 @@ Lambda.has = function(it,elt) {
 var Main = function() { };
 Main.__name__ = ["Main"];
 Main.main = function() {
-	Doom.browser.mount(doom_core_VNodeImpl.ComponentNode(new svg_SvgApp({ })),dots_Query.find("section.svg"));
+	Doom.browser.mount(doom_core_VChildImpl.Comp(new svg_SvgApp({ })),dots_Query.find("section.svg"));
 };
 Math.__name__ = ["Math"];
 var Reflect = function() { };
@@ -932,13 +951,13 @@ doom_core_Component.prototype = {
 		throw new thx_error_AbstractMethod({ fileName : "Component.hx", lineNumber : 16, className : "doom.core.Component", methodName : "render"});
 	}
 	,asNode: function() {
-		return doom_core_VNodeImpl.ComponentNode(this);
+		return doom_core_VChildImpl.Comp(this);
 	}
 	,update: function(props) {
 		var old = this.props;
 		this.props = props;
 		if(!this.shouldUpdate(old,props) || !this.shouldRender()) return;
-		this.apply(doom_core_VNodeImpl.ComponentNode(this),this.node);
+		this.apply(doom_core_VChildImpl.Comp(this),this.node);
 	}
 	,shouldUpdate: function(oldProps,newProps) {
 		return true;
@@ -947,7 +966,7 @@ doom_core_Component.prototype = {
 		return !this.isUnmounted;
 	}
 	,migrationFields: function() {
-		return ["props","update"];
+		return ["props","update","children"];
 	}
 	,didMount: function() {
 	}
@@ -963,13 +982,62 @@ doom_core_Component.prototype = {
 	}
 	,__class__: doom_core_Component
 };
+var doom_core__$VChild_VChild_$Impl_$ = {};
+doom_core__$VChild_VChild_$Impl_$.__name__ = ["doom","core","_VChild","VChild_Impl_"];
+doom_core__$VChild_VChild_$Impl_$.node = function(node) {
+	return doom_core_VChildImpl.Node(node);
+};
+doom_core__$VChild_VChild_$Impl_$.text = function(text) {
+	return doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text(text));
+};
+doom_core__$VChild_VChild_$Impl_$.comp = function(comp) {
+	return doom_core_VChildImpl.Comp(comp);
+};
+var doom_core_VChildImpl = { __ename__ : ["doom","core","VChildImpl"], __constructs__ : ["Node","Comp"] };
+doom_core_VChildImpl.Node = function(node) { var $x = ["Node",0,node]; $x.__enum__ = doom_core_VChildImpl; $x.toString = $estr; return $x; };
+doom_core_VChildImpl.Comp = function(comp) { var $x = ["Comp",1,comp]; $x.__enum__ = doom_core_VChildImpl; $x.toString = $estr; return $x; };
+var doom_core__$VChildren_VChildren_$Impl_$ = {};
+doom_core__$VChildren_VChildren_$Impl_$.__name__ = ["doom","core","_VChildren","VChildren_Impl_"];
+doom_core__$VChildren_VChildren_$Impl_$.node = function(node) {
+	return doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(node)]);
+};
+doom_core__$VChildren_VChildren_$Impl_$.text = function(text) {
+	return doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text(text))]);
+};
+doom_core__$VChildren_VChildren_$Impl_$.comp = function(comp) {
+	return doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Comp(comp)]);
+};
+doom_core__$VChildren_VChildren_$Impl_$.children = function(children) {
+	var this1 = children;
+	return this1;
+};
+doom_core__$VChildren_VChildren_$Impl_$.nodes = function(children) {
+	return doom_core__$VChildren_VChildren_$Impl_$.children(children.map(doom_core__$VChild_VChild_$Impl_$.node));
+};
+doom_core__$VChildren_VChildren_$Impl_$.toArray = function(this1) {
+	return this1;
+};
+doom_core__$VChildren_VChildren_$Impl_$._new = function(arr) {
+	var this1 = arr;
+	return this1;
+};
+doom_core__$VChildren_VChildren_$Impl_$.add = function(this1,child) {
+	this1.push(child);
+	return doom_core__$VChildren_VChildren_$Impl_$.children(this1);
+};
+doom_core__$VChildren_VChildren_$Impl_$.concat = function(this1,other) {
+	return doom_core__$VChildren_VChildren_$Impl_$.children(this1.concat(other));
+};
+doom_core__$VChildren_VChildren_$Impl_$.copy = function(this1) {
+	return doom_core__$VChildren_VChildren_$Impl_$.children(this1.slice());
+};
+doom_core__$VChildren_VChildren_$Impl_$.filter = function(this1,predicate) {
+	return doom_core__$VChildren_VChildren_$Impl_$.children(this1.filter(predicate));
+};
 var doom_core__$VNode_VNode_$Impl_$ = {};
 doom_core__$VNode_VNode_$Impl_$.__name__ = ["doom","core","_VNode","VNode_Impl_"];
 doom_core__$VNode_VNode_$Impl_$.text = function(s) {
 	return doom_core_VNodeImpl.Text(s);
-};
-doom_core__$VNode_VNode_$Impl_$.comp = function(comp) {
-	return doom_core_VNodeImpl.ComponentNode(comp);
 };
 doom_core__$VNode_VNode_$Impl_$.raw = function(content) {
 	return doom_core_VNodeImpl.Raw(content);
@@ -979,41 +1047,14 @@ doom_core__$VNode_VNode_$Impl_$.comment = function(content) {
 };
 doom_core__$VNode_VNode_$Impl_$.el = function(name,attributes,children) {
 	if(null == attributes) attributes = new haxe_ds_StringMap();
-	if(null == children) children = [];
+	if(null == children) children = doom_core__$VChildren_VChildren_$Impl_$.children([]);
 	return doom_core_VNodeImpl.Element(name,attributes,children);
 };
-var doom_core_VNodeImpl = { __ename__ : ["doom","core","VNodeImpl"], __constructs__ : ["Element","Comment","Raw","Text","ComponentNode"] };
+var doom_core_VNodeImpl = { __ename__ : ["doom","core","VNodeImpl"], __constructs__ : ["Element","Comment","Raw","Text"] };
 doom_core_VNodeImpl.Element = function(name,attributes,children) { var $x = ["Element",0,name,attributes,children]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
 doom_core_VNodeImpl.Comment = function(comment) { var $x = ["Comment",1,comment]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
 doom_core_VNodeImpl.Raw = function(code) { var $x = ["Raw",2,code]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
 doom_core_VNodeImpl.Text = function(text) { var $x = ["Text",3,text]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
-doom_core_VNodeImpl.ComponentNode = function(comp) { var $x = ["ComponentNode",4,comp]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
-var doom_core__$VNodes_VNodes_$Impl_$ = {};
-doom_core__$VNodes_VNodes_$Impl_$.__name__ = ["doom","core","_VNodes","VNodes_Impl_"];
-doom_core__$VNodes_VNodes_$Impl_$.node = function(node) {
-	return [node];
-};
-doom_core__$VNodes_VNodes_$Impl_$.nodeImpl = function(node) {
-	return [node];
-};
-doom_core__$VNodes_VNodes_$Impl_$.comps = function(comps) {
-	return comps.map(doom_core__$VNode_VNode_$Impl_$.comp);
-};
-doom_core__$VNodes_VNodes_$Impl_$.nodesImpl = function(nodes) {
-	return nodes;
-};
-doom_core__$VNodes_VNodes_$Impl_$.comment = function(content) {
-	return [doom_core_VNodeImpl.Comment(content)];
-};
-doom_core__$VNodes_VNodes_$Impl_$.text = function(content) {
-	return [doom_core_VNodeImpl.Text(content)];
-};
-doom_core__$VNodes_VNodes_$Impl_$.texts = function(contents) {
-	return contents.map(doom_core__$VNode_VNode_$Impl_$.text);
-};
-doom_core__$VNodes_VNodes_$Impl_$.comp = function(comp) {
-	return [doom_core_VNodeImpl.ComponentNode(comp)];
-};
 var doom_html_AttributeType = { __ename__ : ["doom","html","AttributeType"], __constructs__ : ["BooleanAttribute","Property","BooleanProperty","OverloadedBooleanAttribute","NumericAttribute","PositiveNumericAttribute","SideEffectProperty"] };
 doom_html_AttributeType.BooleanAttribute = ["BooleanAttribute",0];
 doom_html_AttributeType.BooleanAttribute.toString = $estr;
@@ -1525,7 +1566,8 @@ dots_Html.parseNodes = function(html) {
 	return el.childNodes;
 };
 dots_Html.parseArray = function(html) {
-	return Array.prototype.slice.call(dots_Html.parseNodes(html),0);
+	var list = dots_Html.parseNodes(html);
+	return Array.prototype.slice.call(list,0);
 };
 dots_Html.parseElement = function(html) {
 	return dots_Html.parseNodes(html)[0];
@@ -1553,7 +1595,8 @@ dots_Query.selectNodes = function(selector,ctx) {
 	return (ctx != null?ctx:dots_Query.doc).querySelectorAll(selector);
 };
 dots_Query.select = function(selector,ctx) {
-	return Array.prototype.slice.call(dots_Query.selectNodes(selector,ctx),0);
+	var list = dots_Query.selectNodes(selector,ctx);
+	return Array.prototype.slice.call(list,0);
 };
 dots_Query.getElementIndex = function(el) {
 	var index = 0;
@@ -1851,14 +1894,14 @@ var haxe_ds_TreeNode = function(l,k,v,r,h) {
 		var _this = this.left;
 		if(_this == null) tmp1 = 0; else tmp1 = _this._height;
 		var tmp2;
-		var _this1 = this.right;
-		if(_this1 == null) tmp2 = 0; else tmp2 = _this1._height;
+		var _this2 = this.right;
+		if(_this2 == null) tmp2 = 0; else tmp2 = _this2._height;
 		if(tmp1 > tmp2) {
-			var _this2 = this.left;
-			if(_this2 == null) tmp = 0; else tmp = _this2._height;
-		} else {
-			var _this3 = this.right;
+			var _this3 = this.left;
 			if(_this3 == null) tmp = 0; else tmp = _this3._height;
+		} else {
+			var _this4 = this.right;
+			if(_this4 == null) tmp = 0; else tmp = _this4._height;
 		}
 		this._height = tmp + 1;
 	} else this._height = h;
@@ -2112,8 +2155,8 @@ js_Boot.__string_rec = function(o,s) {
 				var _g1 = 2;
 				var _g = o.length;
 				while(_g1 < _g) {
-					var i1 = _g1++;
-					if(i1 != 2) str2 += "," + js_Boot.__string_rec(o[i1],s); else str2 += js_Boot.__string_rec(o[i1],s);
+					var i2 = _g1++;
+					if(i2 != 2) str2 += "," + js_Boot.__string_rec(o[i2],s); else str2 += js_Boot.__string_rec(o[i2],s);
 				}
 				return str2 + ")";
 			}
@@ -2121,10 +2164,11 @@ js_Boot.__string_rec = function(o,s) {
 			var i;
 			var str1 = "[";
 			s += "\t";
-			var _g2 = 0;
-			while(_g2 < l) {
-				var i2 = _g2++;
-				str1 += (i2 > 0?",":"") + js_Boot.__string_rec(o[i2],s);
+			var _g12 = 0;
+			var _g2 = l;
+			while(_g12 < _g2) {
+				var i3 = _g12++;
+				str1 += (i3 > 0?",":"") + js_Boot.__string_rec(o[i3],s);
 			}
 			str1 += "]";
 			return str1;
@@ -2220,102 +2264,6 @@ js_Boot.__isNativeObj = function(o) {
 js_Boot.__resolveNativeClass = function(name) {
 	return $global[name];
 };
-var js_html_compat_ArrayBuffer = function(a) {
-	if((a instanceof Array) && a.__enum__ == null) {
-		this.a = a;
-		this.byteLength = a.length;
-	} else {
-		var len = a;
-		this.a = [];
-		var _g = 0;
-		while(_g < len) {
-			var i = _g++;
-			this.a[i] = 0;
-		}
-		this.byteLength = len;
-	}
-};
-js_html_compat_ArrayBuffer.__name__ = ["js","html","compat","ArrayBuffer"];
-js_html_compat_ArrayBuffer.sliceImpl = function(begin,end) {
-	var u = new Uint8Array(this,begin,end == null?null:end - begin);
-	var result = new ArrayBuffer(u.byteLength);
-	var resultArray = new Uint8Array(result);
-	resultArray.set(u);
-	return result;
-};
-js_html_compat_ArrayBuffer.prototype = {
-	byteLength: null
-	,a: null
-	,slice: function(begin,end) {
-		return new js_html_compat_ArrayBuffer(this.a.slice(begin,end));
-	}
-	,__class__: js_html_compat_ArrayBuffer
-};
-var js_html_compat_Uint8Array = function() { };
-js_html_compat_Uint8Array.__name__ = ["js","html","compat","Uint8Array"];
-js_html_compat_Uint8Array._new = function(arg1,offset,length) {
-	var arr;
-	if(typeof(arg1) == "number") {
-		arr = [];
-		var _g = 0;
-		while(_g < arg1) {
-			var i = _g++;
-			arr[i] = 0;
-		}
-		arr.byteLength = arr.length;
-		arr.byteOffset = 0;
-		arr.buffer = new js_html_compat_ArrayBuffer(arr);
-	} else if(js_Boot.__instanceof(arg1,js_html_compat_ArrayBuffer)) {
-		var buffer = arg1;
-		if(offset == null) offset = 0;
-		if(length == null) length = buffer.byteLength - offset;
-		if(offset == 0) arr = buffer.a; else arr = buffer.a.slice(offset,offset + length);
-		arr.byteLength = arr.length;
-		arr.byteOffset = offset;
-		arr.buffer = buffer;
-	} else if((arg1 instanceof Array) && arg1.__enum__ == null) {
-		arr = arg1.slice();
-		arr.byteLength = arr.length;
-		arr.byteOffset = 0;
-		arr.buffer = new js_html_compat_ArrayBuffer(arr);
-	} else throw new js__$Boot_HaxeError("TODO " + Std.string(arg1));
-	arr.subarray = js_html_compat_Uint8Array._subarray;
-	arr.set = js_html_compat_Uint8Array._set;
-	return arr;
-};
-js_html_compat_Uint8Array._set = function(arg,offset) {
-	var t = this;
-	if((function($this) {
-		var $r;
-		var v = arg.buffer;
-		$r = js_Boot.__instanceof(v,js_html_compat_ArrayBuffer);
-		return $r;
-	}(this))) {
-		var a = arg;
-		if(arg.byteLength + offset > t.byteLength) throw new js__$Boot_HaxeError("set() outside of range");
-		var _g1 = 0;
-		var _g = arg.byteLength;
-		while(_g1 < _g) {
-			var i = _g1++;
-			t[i + offset] = a[i];
-		}
-	} else if((arg instanceof Array) && arg.__enum__ == null) {
-		var a1 = arg;
-		if(a1.length + offset > t.byteLength) throw new js__$Boot_HaxeError("set() outside of range");
-		var _g11 = 0;
-		var _g2 = a1.length;
-		while(_g11 < _g2) {
-			var i1 = _g11++;
-			t[i1 + offset] = a1[i1];
-		}
-	} else throw new js__$Boot_HaxeError("TODO");
-};
-js_html_compat_Uint8Array._subarray = function(start,end) {
-	var t = this;
-	var a = js_html_compat_Uint8Array._new(t.slice(start,end));
-	a.byteOffset = start;
-	return a;
-};
 var svg_SvgApp = function(props,children) {
 	doom_html_Component.call(this,props,children);
 };
@@ -2338,7 +2286,7 @@ svg_SvgApp.prototype = $extend(doom_html_Component.prototype,{
 		if(__map_reserved.r != null) _g1.setReserved("r",value4); else _g1.h["r"] = value4;
 		var value5 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("mediumorchid");
 		if(__map_reserved.fill != null) _g1.setReserved("fill",value5); else _g1.h["fill"] = value5;
-		var tmp = doom_core__$VNode_VNode_$Impl_$.el("svg:circle",_g1,null);
+		var tmp = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("svg:circle",_g1,null));
 		var _g2 = new haxe_ds_StringMap();
 		var value6 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("125");
 		if(__map_reserved.cx != null) _g2.setReserved("cx",value6); else _g2.h["cx"] = value6;
@@ -2348,7 +2296,7 @@ svg_SvgApp.prototype = $extend(doom_html_Component.prototype,{
 		if(__map_reserved.r != null) _g2.setReserved("r",value8); else _g2.h["r"] = value8;
 		var value9 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("#ff0099");
 		if(__map_reserved.fill != null) _g2.setReserved("fill",value9); else _g2.h["fill"] = value9;
-		var tmp1 = doom_core__$VNode_VNode_$Impl_$.el("svg:circle",_g2,null);
+		var tmp1 = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("svg:circle",_g2,null));
 		var _g3 = new haxe_ds_StringMap();
 		var value10 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("200");
 		if(__map_reserved.cx != null) _g3.setReserved("cx",value10); else _g3.h["cx"] = value10;
@@ -2358,7 +2306,7 @@ svg_SvgApp.prototype = $extend(doom_html_Component.prototype,{
 		if(__map_reserved.r != null) _g3.setReserved("r",value12); else _g3.h["r"] = value12;
 		var value13 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("crimson");
 		if(__map_reserved.fill != null) _g3.setReserved("fill",value13); else _g3.h["fill"] = value13;
-		return doom_core__$VNode_VNode_$Impl_$.el("svg:svg",attributes,[tmp,tmp1,doom_core__$VNode_VNode_$Impl_$.el("svg:circle",_g3,null)]);
+		return doom_core__$VNode_VNode_$Impl_$.el("svg:svg",attributes,doom_core__$VChildren_VChildren_$Impl_$.children([tmp,tmp1,doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("svg:circle",_g3,null))]));
 	}
 	,__class__: svg_SvgApp
 });
@@ -2477,9 +2425,10 @@ thx_Arrays.containsAny = function(array,elements,eq) {
 };
 thx_Arrays.create = function(length,fillWith) {
 	var arr = new Array(length);
-	var _g = 0;
-	while(_g < length) {
-		var i = _g++;
+	var _g1 = 0;
+	var _g = length;
+	while(_g1 < _g) {
+		var i = _g1++;
 		arr[i] = fillWith;
 	}
 	return arr;
@@ -2608,9 +2557,10 @@ thx_Arrays.findIndex = function(array,predicate) {
 thx_Arrays.findLast = function(array,predicate) {
 	var len = array.length;
 	var j;
-	var _g = 0;
-	while(_g < len) {
-		var i = _g++;
+	var _g1 = 0;
+	var _g = len;
+	while(_g1 < _g) {
+		var i = _g1++;
 		j = len - i - 1;
 		if(predicate(array[j])) return array[j];
 	}
@@ -2620,7 +2570,8 @@ thx_Arrays.first = function(array) {
 	return array[0];
 };
 thx_Arrays.flatMap = function(array,callback) {
-	return Array.prototype.concat.apply([],array.map(callback));
+	var array1 = array.map(callback);
+	return Array.prototype.concat.apply([],array1);
 };
 thx_Arrays.flatten = function(array) {
 	return Array.prototype.concat.apply([],array);
@@ -2681,11 +2632,7 @@ thx_Arrays.mapi = function(array,callback) {
 thx_Arrays.mapRight = function(array,callback) {
 	var i = array.length;
 	var result = [];
-	while(true) {
-		--i;
-		if(!(i >= 0)) break;
-		result.push(callback(array[i]));
-	}
+	while(--i >= 0) result.push(callback(array[i]));
 	return result;
 };
 thx_Arrays.order = function(array,sort) {
@@ -2717,21 +2664,13 @@ thx_Arrays.reducei = function(array,callback,initial) {
 };
 thx_Arrays.reduceRight = function(array,callback,initial) {
 	var i = array.length;
-	while(true) {
-		--i;
-		if(!(i >= 0)) break;
-		initial = callback(initial,array[i]);
-	}
+	while(--i >= 0) initial = callback(initial,array[i]);
 	return initial;
 };
 thx_Arrays.removeAll = function(array,element,equality) {
 	if(null == equality) equality = thx_Functions.equality;
 	var i = array.length;
-	while(true) {
-		--i;
-		if(!(i >= 0)) break;
-		if(equality(array[i],element)) array.splice(i,1);
-	}
+	while(--i >= 0) if(equality(array[i],element)) array.splice(i,1);
 };
 thx_Arrays.rest = function(array) {
 	return array.slice(1);
@@ -2746,9 +2685,10 @@ thx_Arrays.sample = function(array,n) {
 	if(n < b) n = n; else n = b;
 	var copy = array.slice();
 	var result = [];
-	var _g = 0;
-	while(_g < n) {
-		var i = _g++;
+	var _g1 = 0;
+	var _g = n;
+	while(_g1 < _g) {
+		var i = _g1++;
 		result.push(copy.splice(Std.random(copy.length),1)[0]);
 	}
 	return result;
@@ -2812,6 +2752,7 @@ thx_Arrays.traverseOption = function(arr,f) {
 	},initial);
 };
 thx_Arrays.traverseValidation = function(arr,f,s) {
+	var initial = thx_Either.Right([]);
 	return arr.reduce(function(acc,t) {
 		return thx__$Validation_Validation_$Impl_$.ap(f(t),thx__$Validation_Validation_$Impl_$.ap(acc,thx_Either.Right(function(ux) {
 			return function(u) {
@@ -2821,7 +2762,7 @@ thx_Arrays.traverseValidation = function(arr,f,s) {
 		}),function(e1,e2) {
 			throw new js__$Boot_HaxeError("Unreachable");
 		}),s);
-	},thx_Either.Right([]));
+	},initial);
 };
 thx_Arrays.rotate = function(arr) {
 	var result = [];
@@ -2859,7 +2800,8 @@ thx_Arrays.unzip = function(array) {
 		a1.push(t._0);
 		a2.push(t._1);
 	});
-	return { _0 : a1, _1 : a2};
+	var this1 = { _0 : a1, _1 : a2};
+	return this1;
 };
 thx_Arrays.unzip3 = function(array) {
 	var a1 = [];
@@ -2870,7 +2812,8 @@ thx_Arrays.unzip3 = function(array) {
 		a2.push(t._1);
 		a3.push(t._2);
 	});
-	return { _0 : a1, _1 : a2, _2 : a3};
+	var this1 = { _0 : a1, _1 : a2, _2 : a3};
+	return this1;
 };
 thx_Arrays.unzip4 = function(array) {
 	var a1 = [];
@@ -2883,7 +2826,8 @@ thx_Arrays.unzip4 = function(array) {
 		a3.push(t._2);
 		a4.push(t._3);
 	});
-	return { _0 : a1, _1 : a2, _2 : a3, _3 : a4};
+	var this1 = { _0 : a1, _1 : a2, _2 : a3, _3 : a4};
+	return this1;
 };
 thx_Arrays.unzip5 = function(array) {
 	var a1 = [];
@@ -2898,7 +2842,8 @@ thx_Arrays.unzip5 = function(array) {
 		a4.push(t._3);
 		a5.push(t._4);
 	});
-	return { _0 : a1, _1 : a2, _2 : a3, _3 : a4, _4 : a5};
+	var this1 = { _0 : a1, _1 : a2, _2 : a3, _3 : a4, _4 : a5};
+	return this1;
 };
 thx_Arrays.zip = function(array1,array2) {
 	var length;
@@ -2906,40 +2851,48 @@ thx_Arrays.zip = function(array1,array2) {
 	var b = array2.length;
 	if(a < b) length = a; else length = b;
 	var array = [];
-	var _g = 0;
-	while(_g < length) {
-		var i = _g++;
-		array.push({ _0 : array1[i], _1 : array2[i]});
+	var _g1 = 0;
+	var _g = length;
+	while(_g1 < _g) {
+		var i = _g1++;
+		var this1 = { _0 : array1[i], _1 : array2[i]};
+		array.push(this1);
 	}
 	return array;
 };
 thx_Arrays.zip3 = function(array1,array2,array3) {
 	var length = thx_ArrayInts.min([array1.length,array2.length,array3.length]);
 	var array = [];
-	var _g = 0;
-	while(_g < length) {
-		var i = _g++;
-		array.push({ _0 : array1[i], _1 : array2[i], _2 : array3[i]});
+	var _g1 = 0;
+	var _g = length;
+	while(_g1 < _g) {
+		var i = _g1++;
+		var this1 = { _0 : array1[i], _1 : array2[i], _2 : array3[i]};
+		array.push(this1);
 	}
 	return array;
 };
 thx_Arrays.zip4 = function(array1,array2,array3,array4) {
 	var length = thx_ArrayInts.min([array1.length,array2.length,array3.length,array4.length]);
 	var array = [];
-	var _g = 0;
-	while(_g < length) {
-		var i = _g++;
-		array.push({ _0 : array1[i], _1 : array2[i], _2 : array3[i], _3 : array4[i]});
+	var _g1 = 0;
+	var _g = length;
+	while(_g1 < _g) {
+		var i = _g1++;
+		var this1 = { _0 : array1[i], _1 : array2[i], _2 : array3[i], _3 : array4[i]};
+		array.push(this1);
 	}
 	return array;
 };
 thx_Arrays.zip5 = function(array1,array2,array3,array4,array5) {
 	var length = thx_ArrayInts.min([array1.length,array2.length,array3.length,array4.length,array5.length]);
 	var array = [];
-	var _g = 0;
-	while(_g < length) {
-		var i = _g++;
-		array.push({ _0 : array1[i], _1 : array2[i], _2 : array3[i], _3 : array4[i], _4 : array5[i]});
+	var _g1 = 0;
+	var _g = length;
+	while(_g1 < _g) {
+		var i = _g1++;
+		var this1 = { _0 : array1[i], _1 : array2[i], _2 : array3[i], _3 : array4[i], _4 : array5[i]};
+		array.push(this1);
 	}
 	return array;
 };
@@ -3454,8 +3407,8 @@ thx_Dynamics.equals = function(a,b) {
 				var _g21 = 0;
 				var _g12 = va.length;
 				while(_g21 < _g12) {
-					var i1 = _g21++;
-					if(!thx_Dynamics.equals(va[i1],vb[i1])) return false;
+					var i2 = _g21++;
+					if(!thx_Dynamics.equals(va[i2],vb[i2])) return false;
 				}
 				return true;
 			}
@@ -3466,10 +3419,10 @@ thx_Dynamics.equals = function(a,b) {
 			while(_g13 < fields.length) {
 				var field = fields[_g13];
 				++_g13;
-				var va1 = Reflect.field(a,field);
-				if(Reflect.isFunction(va1)) continue;
-				var vb1 = Reflect.field(b,field);
-				if(!thx_Dynamics.equals(va1,vb1)) return false;
+				var va3 = Reflect.field(a,field);
+				if(Reflect.isFunction(va3)) continue;
+				var vb3 = Reflect.field(b,field);
+				if(!thx_Dynamics.equals(va3,vb3)) return false;
 			}
 			return true;
 		case 7:
@@ -3481,11 +3434,11 @@ thx_Dynamics.equals = function(a,b) {
 			if(a[1] != b[1]) return false;
 			var pa = a.slice(2);
 			var pb = b.slice(2);
-			var _g22 = 0;
+			var _g23 = 0;
 			var _g14 = pa.length;
-			while(_g22 < _g14) {
-				var i2 = _g22++;
-				if(!thx_Dynamics.equals(pa[i2],pb[i2])) return false;
+			while(_g23 < _g14) {
+				var i4 = _g23++;
+				if(!thx_Dynamics.equals(pa[i4],pb[i4])) return false;
 			}
 			return true;
 		case 4:
@@ -3493,28 +3446,28 @@ thx_Dynamics.equals = function(a,b) {
 			var fb = Reflect.fields(b);
 			var _g15 = 0;
 			while(_g15 < fa.length) {
-				var field1 = fa[_g15];
+				var field5 = fa[_g15];
 				++_g15;
-				HxOverrides.remove(fb,field1);
-				if(!Object.prototype.hasOwnProperty.call(b,field1)) return false;
-				var va2 = Reflect.field(a,field1);
-				if(Reflect.isFunction(va2)) continue;
-				var vb2 = Reflect.field(b,field1);
-				if(!thx_Dynamics.equals(va2,vb2)) return false;
+				HxOverrides.remove(fb,field5);
+				if(!Object.prototype.hasOwnProperty.call(b,field5)) return false;
+				var va5 = Reflect.field(a,field5);
+				if(Reflect.isFunction(va5)) continue;
+				var vb5 = Reflect.field(b,field5);
+				if(!thx_Dynamics.equals(va5,vb5)) return false;
 			}
 			if(fb.length > 0) return false;
-			var t1 = false;
-			if((t1 = thx_Iterators.isIterator(a)) || thx_Iterables.isIterable(a)) {
-				if(t1 && !thx_Iterators.isIterator(b)) return false;
-				if(!t1 && !thx_Iterables.isIterable(b)) return false;
-				var aa1 = t1?thx_Iterators.toArray(a):thx_Iterators.toArray($iterator(a)());
-				var ab1 = t1?thx_Iterators.toArray(b):thx_Iterators.toArray($iterator(b)());
-				if(aa1.length != ab1.length) return false;
-				var _g23 = 0;
-				var _g16 = aa1.length;
-				while(_g23 < _g16) {
-					var i3 = _g23++;
-					if(!thx_Dynamics.equals(aa1[i3],ab1[i3])) return false;
+			var t4 = false;
+			if((t4 = thx_Iterators.isIterator(a)) || thx_Iterables.isIterable(a)) {
+				if(t4 && !thx_Iterators.isIterator(b)) return false;
+				if(!t4 && !thx_Iterables.isIterable(b)) return false;
+				var aa5 = t4?thx_Iterators.toArray(a):thx_Iterators.toArray($iterator(a)());
+				var ab5 = t4?thx_Iterators.toArray(b):thx_Iterators.toArray($iterator(b)());
+				if(aa5.length != ab5.length) return false;
+				var _g25 = 0;
+				var _g16 = aa5.length;
+				while(_g25 < _g16) {
+					var i6 = _g25++;
+					if(!thx_Dynamics.equals(aa5[i6],ab5[i6])) return false;
 				}
 				return true;
 			}
@@ -3675,7 +3628,8 @@ thx_DynamicsT.values = function(o) {
 };
 thx_DynamicsT.tuples = function(o) {
 	return Reflect.fields(o).map(function(key) {
-		return { _0 : key, _1 : Reflect.field(o,key)};
+		var this1 = { _0 : key, _1 : Reflect.field(o,key)};
+		return this1;
 	});
 };
 var thx_Either = { __ename__ : ["thx","Either"], __constructs__ : ["Left","Right"] };
@@ -4041,8 +3995,7 @@ var thx_Functions0 = function() { };
 thx_Functions0.__name__ = ["thx","Functions0"];
 thx_Functions0.after = function(callback,n) {
 	return function() {
-		--n;
-		if(n == 0) callback();
+		if(--n == 0) callback();
 	};
 };
 thx_Functions0.join = function(fa,fb) {
@@ -4325,13 +4278,11 @@ thx_Ints.range = function(start,stop,step) {
 	var i = -1;
 	var j;
 	if(step < 0) while(true) {
-		++i;
-		j = start + step * i;
+		j = start + step * ++i;
 		if(!(j > stop)) break;
 		range.push(j);
 	} else while(true) {
-		++i;
-		j = start + step * i;
+		j = start + step * ++i;
 		if(!(j < stop)) break;
 		range.push(j);
 	}
@@ -4434,8 +4385,8 @@ thx_Iterables.isIterable = function(v) {
 	} else tmp = false;
 	if(tmp) fields = Reflect.fields(v); else {
 		var tmp2;
-		var o1 = v;
-		if(o1 == null) tmp2 = null; else tmp2 = js_Boot.getClass(o1);
+		var o2 = v;
+		if(o2 == null) tmp2 = null; else tmp2 = js_Boot.getClass(o2);
 		fields = Type.getInstanceFields(tmp2);
 	}
 	if(!Lambda.has(fields,"iterator")) return false;
@@ -4489,13 +4440,20 @@ thx_Iterables.extremaBy = function(it,f,ord) {
 		var a = tmp.next();
 		switch(found[1]) {
 		case 1:
-			found = haxe_ds_Option.Some({ _0 : a, _1 : a});
+			var this1 = { _0 : a, _1 : a};
+			found = haxe_ds_Option.Some(this1);
 			break;
 		case 0:
 			var t = found[2];
-			if(ord(f(a),f(t._0)) == thx_OrderingImpl.LT) found = haxe_ds_Option.Some({ _0 : a, _1 : t._1}); else {
-				var t1 = found[2];
-				if(ord(f(a),f(t1._1)) == thx_OrderingImpl.GT) found = haxe_ds_Option.Some({ _0 : t1._0, _1 : a}); else found = found;
+			if(ord(f(a),f(t._0)) == thx_OrderingImpl.LT) {
+				var this2 = { _0 : a, _1 : t._1};
+				found = haxe_ds_Option.Some(this2);
+			} else {
+				var t2 = found[2];
+				if(ord(f(a),f(t2._1)) == thx_OrderingImpl.GT) {
+					var this3 = { _0 : t2._0, _1 : a};
+					found = haxe_ds_Option.Some(this3);
+				} else found = found;
 			}
 			break;
 		default:
@@ -4619,8 +4577,8 @@ thx_Iterators.isIterator = function(v) {
 	} else tmp = false;
 	if(tmp) fields = Reflect.fields(v); else {
 		var tmp2;
-		var o1 = v;
-		if(o1 == null) tmp2 = null; else tmp2 = js_Boot.getClass(o1);
+		var o2 = v;
+		if(o2 == null) tmp2 = null; else tmp2 = js_Boot.getClass(o2);
 		fields = Type.getInstanceFields(tmp2);
 	}
 	if(!Lambda.has(fields,"next") || !Lambda.has(fields,"hasNext")) return false;
@@ -4683,7 +4641,8 @@ thx_Iterators.unzip = function(it) {
 		a1.push(t._0);
 		a2.push(t._1);
 	});
-	return { _0 : a1, _1 : a2};
+	var this1 = { _0 : a1, _1 : a2};
+	return this1;
 };
 thx_Iterators.unzip3 = function(it) {
 	var a1 = [];
@@ -4694,7 +4653,8 @@ thx_Iterators.unzip3 = function(it) {
 		a2.push(t._1);
 		a3.push(t._2);
 	});
-	return { _0 : a1, _1 : a2, _2 : a3};
+	var this1 = { _0 : a1, _1 : a2, _2 : a3};
+	return this1;
 };
 thx_Iterators.unzip4 = function(it) {
 	var a1 = [];
@@ -4707,7 +4667,8 @@ thx_Iterators.unzip4 = function(it) {
 		a3.push(t._2);
 		a4.push(t._3);
 	});
-	return { _0 : a1, _1 : a2, _2 : a3, _3 : a4};
+	var this1 = { _0 : a1, _1 : a2, _2 : a3, _3 : a4};
+	return this1;
 };
 thx_Iterators.unzip5 = function(it) {
 	var a1 = [];
@@ -4722,26 +4683,39 @@ thx_Iterators.unzip5 = function(it) {
 		a4.push(t._3);
 		a5.push(t._4);
 	});
-	return { _0 : a1, _1 : a2, _2 : a3, _3 : a4, _4 : a5};
+	var this1 = { _0 : a1, _1 : a2, _2 : a3, _3 : a4, _4 : a5};
+	return this1;
 };
 thx_Iterators.zip = function(it1,it2) {
 	var array = [];
-	while(it1.hasNext() && it2.hasNext()) array.push({ _0 : it1.next(), _1 : it2.next()});
+	while(it1.hasNext() && it2.hasNext()) {
+		var this1 = { _0 : it1.next(), _1 : it2.next()};
+		array.push(this1);
+	}
 	return array;
 };
 thx_Iterators.zip3 = function(it1,it2,it3) {
 	var array = [];
-	while(it1.hasNext() && it2.hasNext() && it3.hasNext()) array.push({ _0 : it1.next(), _1 : it2.next(), _2 : it3.next()});
+	while(it1.hasNext() && it2.hasNext() && it3.hasNext()) {
+		var this1 = { _0 : it1.next(), _1 : it2.next(), _2 : it3.next()};
+		array.push(this1);
+	}
 	return array;
 };
 thx_Iterators.zip4 = function(it1,it2,it3,it4) {
 	var array = [];
-	while(it1.hasNext() && it2.hasNext() && it3.hasNext() && it4.hasNext()) array.push({ _0 : it1.next(), _1 : it2.next(), _2 : it3.next(), _3 : it4.next()});
+	while(it1.hasNext() && it2.hasNext() && it3.hasNext() && it4.hasNext()) {
+		var this1 = { _0 : it1.next(), _1 : it2.next(), _2 : it3.next(), _3 : it4.next()};
+		array.push(this1);
+	}
 	return array;
 };
 thx_Iterators.zip5 = function(it1,it2,it3,it4,it5) {
 	var array = [];
-	while(it1.hasNext() && it2.hasNext() && it3.hasNext() && it4.hasNext() && it5.hasNext()) array.push({ _0 : it1.next(), _1 : it2.next(), _2 : it3.next(), _3 : it4.next(), _4 : it5.next()});
+	while(it1.hasNext() && it2.hasNext() && it3.hasNext() && it4.hasNext() && it5.hasNext()) {
+		var this1 = { _0 : it1.next(), _1 : it2.next(), _2 : it3.next(), _3 : it4.next(), _4 : it5.next()};
+		array.push(this1);
+	}
 	return array;
 };
 var thx_Maps = function() { };
@@ -4756,7 +4730,8 @@ thx_Maps.copyTo = function(src,dst) {
 };
 thx_Maps.tuples = function(map) {
 	return thx_Iterators.map(map.keys(),function(key) {
-		return { _0 : key, _1 : map.get(key)};
+		var this1 = { _0 : key, _1 : map.get(key)};
+		return this1;
 	});
 };
 thx_Maps.mapValues = function(map,f,acc) {
@@ -4778,8 +4753,7 @@ thx_Maps.getOption = function(map,key) {
 	if(null == value) return haxe_ds_Option.None; else return haxe_ds_Option.Some(value);
 };
 thx_Maps.toObject = function(map) {
-	var array = thx_Maps.tuples(map);
-	return array.reduce(function(o,t) {
+	return thx_Maps.tuples(map).reduce(function(o,t) {
 		o[t._0] = t._1;
 		return o;
 	},{ });
@@ -4937,11 +4911,11 @@ thx_Objects.combine = function(first,second) {
 		to[field] = Reflect.field(first,field);
 	}
 	var _g2 = 0;
-	var _g11 = Reflect.fields(second);
-	while(_g2 < _g11.length) {
-		var field1 = _g11[_g2];
+	var _g12 = Reflect.fields(second);
+	while(_g2 < _g12.length) {
+		var field2 = _g12[_g2];
 		++_g2;
-		to[field1] = Reflect.field(second,field1);
+		to[field2] = Reflect.field(second,field2);
 	}
 	return to;
 };
@@ -4979,8 +4953,8 @@ thx_Objects.copyTo = function(src,dst,cloneInstances) {
 		if(tmp1) {
 			if(Reflect.isObject(dv)) {
 				var tmp3;
-				var o1 = dv;
-				if(o1 == null) tmp3 = null; else tmp3 = js_Boot.getClass(o1);
+				var o3 = dv;
+				if(o3 == null) tmp3 = null; else tmp3 = js_Boot.getClass(o3);
 				tmp = null == tmp3;
 			} else tmp = false;
 		} else tmp = false;
@@ -5021,7 +4995,8 @@ thx_Objects.values = function(o) {
 };
 thx_Objects.tuples = function(o) {
 	return Reflect.fields(o).map(function(key) {
-		return { _0 : key, _1 : Reflect.field(o,key)};
+		var this1 = { _0 : key, _1 : Reflect.field(o,key)};
+		return this1;
 	});
 };
 thx_Objects.hasPath = function(o,path) {
@@ -5342,9 +5317,9 @@ thx_Options.ap4 = function(f,v1,v2,v3,v4) {
 			return f1(a,b,c,d);
 		};
 	};
-	return thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a1,b1) {
-		return function(c1) {
-			return f2(a1,b1,c1);
+	return thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a2,b2) {
+		return function(c2) {
+			return f2(a2,b2,c2);
 		};
 	})))));
 };
@@ -5355,14 +5330,14 @@ thx_Options.ap5 = function(f,v1,v2,v3,v4,v5) {
 			return f1(a,b,c,d,e);
 		};
 	};
-	var f3 = function(a1,b1,c1) {
-		return function(d1) {
-			return f2(a1,b1,c1,d1);
+	var f3 = function(a2,b2,c2) {
+		return function(d2) {
+			return f2(a2,b2,c2,d2);
 		};
 	};
-	return thx_Options.ap(v5,thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a2,b2) {
-		return function(c2) {
-			return f3(a2,b2,c2);
+	return thx_Options.ap(v5,thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a3,b3) {
+		return function(c3) {
+			return f3(a3,b3,c3);
 		};
 	}))))));
 };
@@ -5373,19 +5348,19 @@ thx_Options.ap6 = function(f,v1,v2,v3,v4,v5,v6) {
 			return f1(a,b,c,d,e,f0);
 		};
 	};
-	var f3 = function(a1,b1,c1,d1) {
-		return function(e1) {
-			return f2(a1,b1,c1,d1,e1);
+	var f3 = function(a2,b2,c2,d2) {
+		return function(e2) {
+			return f2(a2,b2,c2,d2,e2);
 		};
 	};
-	var f4 = function(a2,b2,c2) {
-		return function(d2) {
-			return f3(a2,b2,c2,d2);
+	var f4 = function(a3,b3,c3) {
+		return function(d3) {
+			return f3(a3,b3,c3,d3);
 		};
 	};
-	return thx_Options.ap(v6,thx_Options.ap(v5,thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a3,b3) {
-		return function(c3) {
-			return f4(a3,b3,c3);
+	return thx_Options.ap(v6,thx_Options.ap(v5,thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a4,b4) {
+		return function(c4) {
+			return f4(a4,b4,c4);
 		};
 	})))))));
 };
@@ -5396,24 +5371,24 @@ thx_Options.ap7 = function(f,v1,v2,v3,v4,v5,v6,v7) {
 			return f1(a,b,c,d,e,f0,g);
 		};
 	};
-	var f3 = function(a1,b1,c1,d1,e1) {
-		return function(f01) {
-			return f2(a1,b1,c1,d1,e1,f01);
+	var f3 = function(a2,b2,c2,d2,e2) {
+		return function(f02) {
+			return f2(a2,b2,c2,d2,e2,f02);
 		};
 	};
-	var f4 = function(a2,b2,c2,d2) {
-		return function(e2) {
-			return f3(a2,b2,c2,d2,e2);
+	var f4 = function(a3,b3,c3,d3) {
+		return function(e3) {
+			return f3(a3,b3,c3,d3,e3);
 		};
 	};
-	var f5 = function(a3,b3,c3) {
-		return function(d3) {
-			return f4(a3,b3,c3,d3);
+	var f5 = function(a4,b4,c4) {
+		return function(d4) {
+			return f4(a4,b4,c4,d4);
 		};
 	};
-	return thx_Options.ap(v7,thx_Options.ap(v6,thx_Options.ap(v5,thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a4,b4) {
-		return function(c4) {
-			return f5(a4,b4,c4);
+	return thx_Options.ap(v7,thx_Options.ap(v6,thx_Options.ap(v5,thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a5,b5) {
+		return function(c5) {
+			return f5(a5,b5,c5);
 		};
 	}))))))));
 };
@@ -5424,29 +5399,29 @@ thx_Options.ap8 = function(f,v1,v2,v3,v4,v5,v6,v7,v8) {
 			return f1(a,b,c,d,e,f0,g,h);
 		};
 	};
-	var f3 = function(a1,b1,c1,d1,e1,f01) {
-		return function(g1) {
-			return f2(a1,b1,c1,d1,e1,f01,g1);
+	var f3 = function(a2,b2,c2,d2,e2,f02) {
+		return function(g2) {
+			return f2(a2,b2,c2,d2,e2,f02,g2);
 		};
 	};
-	var f4 = function(a2,b2,c2,d2,e2) {
-		return function(f02) {
-			return f3(a2,b2,c2,d2,e2,f02);
+	var f4 = function(a3,b3,c3,d3,e3) {
+		return function(f03) {
+			return f3(a3,b3,c3,d3,e3,f03);
 		};
 	};
-	var f5 = function(a3,b3,c3,d3) {
-		return function(e3) {
-			return f4(a3,b3,c3,d3,e3);
+	var f5 = function(a4,b4,c4,d4) {
+		return function(e4) {
+			return f4(a4,b4,c4,d4,e4);
 		};
 	};
-	var f6 = function(a4,b4,c4) {
-		return function(d4) {
-			return f5(a4,b4,c4,d4);
+	var f6 = function(a5,b5,c5) {
+		return function(d5) {
+			return f5(a5,b5,c5,d5);
 		};
 	};
-	return thx_Options.ap(v8,thx_Options.ap(v7,thx_Options.ap(v6,thx_Options.ap(v5,thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a5,b5) {
-		return function(c5) {
-			return f6(a5,b5,c5);
+	return thx_Options.ap(v8,thx_Options.ap(v7,thx_Options.ap(v6,thx_Options.ap(v5,thx_Options.ap(v4,thx_Options.ap(v3,thx_Options.ap(v2,thx_Options.map(v1,thx_Functions2.curry(function(a6,b6) {
+		return function(c6) {
+			return f6(a6,b6,c6);
 		};
 	})))))))));
 };
@@ -5471,9 +5446,10 @@ thx__$ReadonlyArray_ReadonlyArray_$Impl_$.indexOf = function(this1,el,eq) {
 thx__$ReadonlyArray_ReadonlyArray_$Impl_$.lastIndexOf = function(this1,el,eq) {
 	if(null == eq) eq = thx_Functions.equality;
 	var len = this1.length;
-	var _g = 0;
-	while(_g < len) {
-		var i = _g++;
+	var _g1 = 0;
+	var _g = len;
+	while(_g1 < _g) {
+		var i = _g1++;
 		if(eq(el,this1[len - i - 1])) return i;
 	}
 	return -1;
@@ -5544,30 +5520,35 @@ var thx__$Set_Set_$Impl_$ = {};
 thx__$Set_Set_$Impl_$.__name__ = ["thx","_Set","Set_Impl_"];
 thx__$Set_Set_$Impl_$.createString = function(it) {
 	var map = new haxe_ds_StringMap();
-	var set = map;
+	var this1 = map;
+	var set = this1;
 	if(null != it) thx__$Set_Set_$Impl_$.pushMany(set,it);
 	return set;
 };
 thx__$Set_Set_$Impl_$.createInt = function(it) {
 	var map = new haxe_ds_IntMap();
-	var set = map;
+	var this1 = map;
+	var set = this1;
 	if(null != it) thx__$Set_Set_$Impl_$.pushMany(set,it);
 	return set;
 };
 thx__$Set_Set_$Impl_$.createObject = function(it) {
 	var map = new haxe_ds_ObjectMap();
-	var set = map;
+	var this1 = map;
+	var set = this1;
 	if(null != it) thx__$Set_Set_$Impl_$.pushMany(set,it);
 	return set;
 };
 thx__$Set_Set_$Impl_$.createEnum = function(arr) {
 	var map = new haxe_ds_EnumValueMap();
-	var set = map;
+	var this1 = map;
+	var set = this1;
 	if(null != arr) thx__$Set_Set_$Impl_$.pushMany(set,arr);
 	return set;
 };
 thx__$Set_Set_$Impl_$._new = function(map) {
-	return map;
+	var this1 = map;
+	return this1;
 };
 thx__$Set_Set_$Impl_$.add = function(this1,v) {
 	if(this1.exists(v)) return false; else {
@@ -5586,7 +5567,8 @@ thx__$Set_Set_$Impl_$.copy = function(this1) {
 };
 thx__$Set_Set_$Impl_$.empty = function(this1) {
 	var inst = Type.createInstance(this1 == null?null:js_Boot.getClass(this1),[]);
-	return inst;
+	var this2 = inst;
+	return this2;
 };
 thx__$Set_Set_$Impl_$.difference = function(this1,set) {
 	var result = thx__$Set_Set_$Impl_$.copy(this1);
@@ -5748,9 +5730,10 @@ thx_Strings.diffAt = function(a,b) {
 	var a1 = a.length;
 	var b1 = b.length;
 	if(a1 < b1) min = a1; else min = b1;
-	var _g = 0;
-	while(_g < min) {
-		var i = _g++;
+	var _g1 = 0;
+	var _g = min;
+	while(_g1 < _g) {
+		var i = _g1++;
 		if(a.substring(i,i + 1) != b.substring(i,i + 1)) return i;
 	}
 	return min;
@@ -5876,9 +5859,10 @@ thx_Strings.removeOne = function(value,toremove) {
 };
 thx_Strings.repeat = function(s,times) {
 	var _g = [];
-	var _g1 = 0;
-	while(_g1 < times) {
-		var i = _g1++;
+	var _g2 = 0;
+	var _g1 = times;
+	while(_g2 < _g1) {
+		var i = _g2++;
 		_g.push(s);
 	}
 	return _g.join("");
@@ -5943,9 +5927,10 @@ thx_Strings.trimCharsRight = function(value,charlist) {
 	var len = value.length;
 	var pos = len;
 	var i;
-	var _g = 0;
-	while(_g < len) {
-		var j = _g++;
+	var _g1 = 0;
+	var _g = len;
+	while(_g1 < _g) {
+		var j = _g1++;
 		i = len - j - 1;
 		if(charlist.indexOf(value.charAt(i)) >= 0) pos = i; else break;
 	}
@@ -6136,10 +6121,12 @@ thx__$Timestamp_Timestamp_$Impl_$.c = function(t,v) {
 var thx__$Tuple_Tuple0_$Impl_$ = {};
 thx__$Tuple_Tuple0_$Impl_$.__name__ = ["thx","_Tuple","Tuple0_Impl_"];
 thx__$Tuple_Tuple0_$Impl_$._new = function() {
-	return thx_Nil.nil;
+	var this1 = thx_Nil.nil;
+	return this1;
 };
 thx__$Tuple_Tuple0_$Impl_$["with"] = function(this1,v) {
-	return v;
+	var this2 = v;
+	return this2;
 };
 thx__$Tuple_Tuple0_$Impl_$.toString = function(this1) {
 	return "Tuple0()";
@@ -6148,32 +6135,38 @@ thx__$Tuple_Tuple0_$Impl_$.toNil = function(this1) {
 	return this1;
 };
 thx__$Tuple_Tuple0_$Impl_$.nilToTuple = function(v) {
-	return thx_Nil.nil;
+	var this1 = thx_Nil.nil;
+	return this1;
 };
 var thx__$Tuple_Tuple1_$Impl_$ = {};
 thx__$Tuple_Tuple1_$Impl_$.__name__ = ["thx","_Tuple","Tuple1_Impl_"];
 thx__$Tuple_Tuple1_$Impl_$._new = function(_0) {
-	return _0;
+	var this1 = _0;
+	return this1;
 };
 thx__$Tuple_Tuple1_$Impl_$.get__0 = function(this1) {
 	return this1;
 };
 thx__$Tuple_Tuple1_$Impl_$["with"] = function(this1,v) {
-	return { _0 : this1, _1 : v};
+	var this2 = { _0 : this1, _1 : v};
+	return this2;
 };
 thx__$Tuple_Tuple1_$Impl_$.toString = function(this1) {
 	return "Tuple1(" + Std.string(this1) + ")";
 };
 thx__$Tuple_Tuple1_$Impl_$.arrayToTuple = function(v) {
-	return v[0];
+	var this1 = v[0];
+	return this1;
 };
 var thx__$Tuple_Tuple2_$Impl_$ = {};
 thx__$Tuple_Tuple2_$Impl_$.__name__ = ["thx","_Tuple","Tuple2_Impl_"];
 thx__$Tuple_Tuple2_$Impl_$.of = function(_0,_1) {
-	return { _0 : _0, _1 : _1};
+	var this1 = { _0 : _0, _1 : _1};
+	return this1;
 };
 thx__$Tuple_Tuple2_$Impl_$._new = function(_0,_1) {
-	return { _0 : _0, _1 : _1};
+	var this1 = { _0 : _0, _1 : _1};
+	return this1;
 };
 thx__$Tuple_Tuple2_$Impl_$.get_left = function(this1) {
 	return this1._0;
@@ -6185,126 +6178,155 @@ thx__$Tuple_Tuple2_$Impl_$.flip = function(this1) {
 	return { _0 : this1._1, _1 : this1._0};
 };
 thx__$Tuple_Tuple2_$Impl_$.dropLeft = function(this1) {
-	return this1._1;
+	var this2 = this1._1;
+	return this2;
 };
 thx__$Tuple_Tuple2_$Impl_$.dropRight = function(this1) {
-	return this1._0;
+	var this2 = this1._0;
+	return this2;
 };
 thx__$Tuple_Tuple2_$Impl_$["with"] = function(this1,v) {
-	return { _0 : this1._0, _1 : this1._1, _2 : v};
+	var this2 = { _0 : this1._0, _1 : this1._1, _2 : v};
+	return this2;
 };
 thx__$Tuple_Tuple2_$Impl_$.toString = function(this1) {
 	return "Tuple2(" + Std.string(this1._0) + "," + Std.string(this1._1) + ")";
 };
 thx__$Tuple_Tuple2_$Impl_$.map = function(this1,f) {
-	return { _0 : this1._0, _1 : f(this1._1)};
+	var this2 = { _0 : this1._0, _1 : f(this1._1)};
+	return this2;
 };
 thx__$Tuple_Tuple2_$Impl_$.arrayToTuple2 = function(v) {
-	return { _0 : v[0], _1 : v[1]};
+	var this1 = { _0 : v[0], _1 : v[1]};
+	return this1;
 };
 var thx__$Tuple_Tuple3_$Impl_$ = {};
 thx__$Tuple_Tuple3_$Impl_$.__name__ = ["thx","_Tuple","Tuple3_Impl_"];
 thx__$Tuple_Tuple3_$Impl_$.of = function(_0,_1,_2) {
-	return { _0 : _0, _1 : _1, _2 : _2};
+	var this1 = { _0 : _0, _1 : _1, _2 : _2};
+	return this1;
 };
 thx__$Tuple_Tuple3_$Impl_$._new = function(_0,_1,_2) {
-	return { _0 : _0, _1 : _1, _2 : _2};
+	var this1 = { _0 : _0, _1 : _1, _2 : _2};
+	return this1;
 };
 thx__$Tuple_Tuple3_$Impl_$.flip = function(this1) {
 	return { _0 : this1._2, _1 : this1._1, _2 : this1._0};
 };
 thx__$Tuple_Tuple3_$Impl_$.dropLeft = function(this1) {
-	return { _0 : this1._1, _1 : this1._2};
+	var this2 = { _0 : this1._1, _1 : this1._2};
+	return this2;
 };
 thx__$Tuple_Tuple3_$Impl_$.dropRight = function(this1) {
-	return { _0 : this1._0, _1 : this1._1};
+	var this2 = { _0 : this1._0, _1 : this1._1};
+	return this2;
 };
 thx__$Tuple_Tuple3_$Impl_$["with"] = function(this1,v) {
-	return { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : v};
+	var this2 = { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : v};
+	return this2;
 };
 thx__$Tuple_Tuple3_$Impl_$.toString = function(this1) {
 	return "Tuple3(" + Std.string(this1._0) + "," + Std.string(this1._1) + "," + Std.string(this1._2) + ")";
 };
 thx__$Tuple_Tuple3_$Impl_$.arrayToTuple3 = function(v) {
-	return { _0 : v[0], _1 : v[1], _2 : v[2]};
+	var this1 = { _0 : v[0], _1 : v[1], _2 : v[2]};
+	return this1;
 };
 thx__$Tuple_Tuple3_$Impl_$.map = function(this1,f) {
-	return { _0 : this1._0, _1 : this1._1, _2 : f(this1._2)};
+	var this2 = { _0 : this1._0, _1 : this1._1, _2 : f(this1._2)};
+	return this2;
 };
 var thx__$Tuple_Tuple4_$Impl_$ = {};
 thx__$Tuple_Tuple4_$Impl_$.__name__ = ["thx","_Tuple","Tuple4_Impl_"];
 thx__$Tuple_Tuple4_$Impl_$.of = function(_0,_1,_2,_3) {
-	return { _0 : _0, _1 : _1, _2 : _2, _3 : _3};
+	var this1 = { _0 : _0, _1 : _1, _2 : _2, _3 : _3};
+	return this1;
 };
 thx__$Tuple_Tuple4_$Impl_$._new = function(_0,_1,_2,_3) {
-	return { _0 : _0, _1 : _1, _2 : _2, _3 : _3};
+	var this1 = { _0 : _0, _1 : _1, _2 : _2, _3 : _3};
+	return this1;
 };
 thx__$Tuple_Tuple4_$Impl_$.flip = function(this1) {
 	return { _0 : this1._3, _1 : this1._2, _2 : this1._1, _3 : this1._0};
 };
 thx__$Tuple_Tuple4_$Impl_$.dropLeft = function(this1) {
-	return { _0 : this1._1, _1 : this1._2, _2 : this1._3};
+	var this2 = { _0 : this1._1, _1 : this1._2, _2 : this1._3};
+	return this2;
 };
 thx__$Tuple_Tuple4_$Impl_$.dropRight = function(this1) {
-	return { _0 : this1._0, _1 : this1._1, _2 : this1._2};
+	var this2 = { _0 : this1._0, _1 : this1._1, _2 : this1._2};
+	return this2;
 };
 thx__$Tuple_Tuple4_$Impl_$["with"] = function(this1,v) {
-	return { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : this1._3, _4 : v};
+	var this2 = { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : this1._3, _4 : v};
+	return this2;
 };
 thx__$Tuple_Tuple4_$Impl_$.toString = function(this1) {
 	return "Tuple4(" + Std.string(this1._0) + "," + Std.string(this1._1) + "," + Std.string(this1._2) + "," + Std.string(this1._3) + ")";
 };
 thx__$Tuple_Tuple4_$Impl_$.arrayToTuple4 = function(v) {
-	return { _0 : v[0], _1 : v[1], _2 : v[2], _3 : v[3]};
+	var this1 = { _0 : v[0], _1 : v[1], _2 : v[2], _3 : v[3]};
+	return this1;
 };
 var thx__$Tuple_Tuple5_$Impl_$ = {};
 thx__$Tuple_Tuple5_$Impl_$.__name__ = ["thx","_Tuple","Tuple5_Impl_"];
 thx__$Tuple_Tuple5_$Impl_$.of = function(_0,_1,_2,_3,_4) {
-	return { _0 : _0, _1 : _1, _2 : _2, _3 : _3, _4 : _4};
+	var this1 = { _0 : _0, _1 : _1, _2 : _2, _3 : _3, _4 : _4};
+	return this1;
 };
 thx__$Tuple_Tuple5_$Impl_$._new = function(_0,_1,_2,_3,_4) {
-	return { _0 : _0, _1 : _1, _2 : _2, _3 : _3, _4 : _4};
+	var this1 = { _0 : _0, _1 : _1, _2 : _2, _3 : _3, _4 : _4};
+	return this1;
 };
 thx__$Tuple_Tuple5_$Impl_$.flip = function(this1) {
 	return { _0 : this1._4, _1 : this1._3, _2 : this1._2, _3 : this1._1, _4 : this1._0};
 };
 thx__$Tuple_Tuple5_$Impl_$.dropLeft = function(this1) {
-	return { _0 : this1._1, _1 : this1._2, _2 : this1._3, _3 : this1._4};
+	var this2 = { _0 : this1._1, _1 : this1._2, _2 : this1._3, _3 : this1._4};
+	return this2;
 };
 thx__$Tuple_Tuple5_$Impl_$.dropRight = function(this1) {
-	return { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : this1._3};
+	var this2 = { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : this1._3};
+	return this2;
 };
 thx__$Tuple_Tuple5_$Impl_$["with"] = function(this1,v) {
-	return { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : this1._3, _4 : this1._4, _5 : v};
+	var this2 = { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : this1._3, _4 : this1._4, _5 : v};
+	return this2;
 };
 thx__$Tuple_Tuple5_$Impl_$.toString = function(this1) {
 	return "Tuple5(" + Std.string(this1._0) + "," + Std.string(this1._1) + "," + Std.string(this1._2) + "," + Std.string(this1._3) + "," + Std.string(this1._4) + ")";
 };
 thx__$Tuple_Tuple5_$Impl_$.arrayToTuple5 = function(v) {
-	return { _0 : v[0], _1 : v[1], _2 : v[2], _3 : v[3], _4 : v[4]};
+	var this1 = { _0 : v[0], _1 : v[1], _2 : v[2], _3 : v[3], _4 : v[4]};
+	return this1;
 };
 var thx__$Tuple_Tuple6_$Impl_$ = {};
 thx__$Tuple_Tuple6_$Impl_$.__name__ = ["thx","_Tuple","Tuple6_Impl_"];
 thx__$Tuple_Tuple6_$Impl_$.of = function(_0,_1,_2,_3,_4,_5) {
-	return { _0 : _0, _1 : _1, _2 : _2, _3 : _3, _4 : _4, _5 : _5};
+	var this1 = { _0 : _0, _1 : _1, _2 : _2, _3 : _3, _4 : _4, _5 : _5};
+	return this1;
 };
 thx__$Tuple_Tuple6_$Impl_$._new = function(_0,_1,_2,_3,_4,_5) {
-	return { _0 : _0, _1 : _1, _2 : _2, _3 : _3, _4 : _4, _5 : _5};
+	var this1 = { _0 : _0, _1 : _1, _2 : _2, _3 : _3, _4 : _4, _5 : _5};
+	return this1;
 };
 thx__$Tuple_Tuple6_$Impl_$.flip = function(this1) {
 	return { _0 : this1._5, _1 : this1._4, _2 : this1._3, _3 : this1._2, _4 : this1._1, _5 : this1._0};
 };
 thx__$Tuple_Tuple6_$Impl_$.dropLeft = function(this1) {
-	return { _0 : this1._1, _1 : this1._2, _2 : this1._3, _3 : this1._4, _4 : this1._5};
+	var this2 = { _0 : this1._1, _1 : this1._2, _2 : this1._3, _3 : this1._4, _4 : this1._5};
+	return this2;
 };
 thx__$Tuple_Tuple6_$Impl_$.dropRight = function(this1) {
-	return { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : this1._3, _4 : this1._4};
+	var this2 = { _0 : this1._0, _1 : this1._1, _2 : this1._2, _3 : this1._3, _4 : this1._4};
+	return this2;
 };
 thx__$Tuple_Tuple6_$Impl_$.toString = function(this1) {
 	return "Tuple6(" + Std.string(this1._0) + "," + Std.string(this1._1) + "," + Std.string(this1._2) + "," + Std.string(this1._3) + "," + Std.string(this1._4) + "," + Std.string(this1._5) + ")";
 };
 thx__$Tuple_Tuple6_$Impl_$.arrayToTuple6 = function(v) {
-	return { _0 : v[0], _1 : v[1], _2 : v[2], _3 : v[3], _4 : v[4], _5 : v[5]};
+	var this1 = { _0 : v[0], _1 : v[1], _2 : v[2], _3 : v[3], _4 : v[4], _5 : v[5]};
+	return this1;
 };
 var thx_Types = function() { };
 thx_Types.__name__ = ["thx","Types"];
@@ -6521,9 +6543,9 @@ thx__$Validation_Validation_$Impl_$.val4 = function(f,v1,v2,v3,v4,s) {
 			return f1(a,b,c,d);
 		};
 	};
-	return thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a1,b1) {
-		return function(c1) {
-			return f2(a1,b1,c1);
+	return thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a2,b2) {
+		return function(c2) {
+			return f2(a2,b2,c2);
 		};
 	})),function(e1,e2) {
 		throw new js__$Boot_HaxeError("Unreachable");
@@ -6536,14 +6558,14 @@ thx__$Validation_Validation_$Impl_$.val5 = function(f,v1,v2,v3,v4,v5,s) {
 			return f1(a,b,c,d,e);
 		};
 	};
-	var f3 = function(a1,b1,c1) {
-		return function(d1) {
-			return f2(a1,b1,c1,d1);
+	var f3 = function(a2,b2,c2) {
+		return function(d2) {
+			return f2(a2,b2,c2,d2);
 		};
 	};
-	return thx__$Validation_Validation_$Impl_$.ap(v5,thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a2,b2) {
-		return function(c2) {
-			return f3(a2,b2,c2);
+	return thx__$Validation_Validation_$Impl_$.ap(v5,thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a3,b3) {
+		return function(c3) {
+			return f3(a3,b3,c3);
 		};
 	})),function(e1,e2) {
 		throw new js__$Boot_HaxeError("Unreachable");
@@ -6556,21 +6578,21 @@ thx__$Validation_Validation_$Impl_$.val6 = function(f,v1,v2,v3,v4,v5,v6,s) {
 			return f1(a,b,c,d,e,f0);
 		};
 	};
-	var f3 = function(a1,b1,c1,d1) {
-		return function(e1) {
-			return f2(a1,b1,c1,d1,e1);
+	var f3 = function(a2,b2,c2,d2) {
+		return function(e2) {
+			return f2(a2,b2,c2,d2,e2);
 		};
 	};
-	var f4 = function(a2,b2,c2) {
-		return function(d2) {
-			return f3(a2,b2,c2,d2);
+	var f4 = function(a3,b3,c3) {
+		return function(d3) {
+			return f3(a3,b3,c3,d3);
 		};
 	};
-	return thx__$Validation_Validation_$Impl_$.ap(v6,thx__$Validation_Validation_$Impl_$.ap(v5,thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a3,b3) {
-		return function(c3) {
-			return f4(a3,b3,c3);
+	return thx__$Validation_Validation_$Impl_$.ap(v6,thx__$Validation_Validation_$Impl_$.ap(v5,thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a4,b4) {
+		return function(c4) {
+			return f4(a4,b4,c4);
 		};
-	})),function(e11,e2) {
+	})),function(e1,e24) {
 		throw new js__$Boot_HaxeError("Unreachable");
 	}),s),s),s),s),s);
 };
@@ -6581,26 +6603,26 @@ thx__$Validation_Validation_$Impl_$.val7 = function(f,v1,v2,v3,v4,v5,v6,v7,s) {
 			return f1(a,b,c,d,e,f0,g);
 		};
 	};
-	var f3 = function(a1,b1,c1,d1,e1) {
-		return function(f01) {
-			return f2(a1,b1,c1,d1,e1,f01);
+	var f3 = function(a2,b2,c2,d2,e2) {
+		return function(f02) {
+			return f2(a2,b2,c2,d2,e2,f02);
 		};
 	};
-	var f4 = function(a2,b2,c2,d2) {
-		return function(e2) {
-			return f3(a2,b2,c2,d2,e2);
+	var f4 = function(a3,b3,c3,d3) {
+		return function(e3) {
+			return f3(a3,b3,c3,d3,e3);
 		};
 	};
-	var f5 = function(a3,b3,c3) {
-		return function(d3) {
-			return f4(a3,b3,c3,d3);
+	var f5 = function(a4,b4,c4) {
+		return function(d4) {
+			return f4(a4,b4,c4,d4);
 		};
 	};
-	return thx__$Validation_Validation_$Impl_$.ap(v7,thx__$Validation_Validation_$Impl_$.ap(v6,thx__$Validation_Validation_$Impl_$.ap(v5,thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a4,b4) {
-		return function(c4) {
-			return f5(a4,b4,c4);
+	return thx__$Validation_Validation_$Impl_$.ap(v7,thx__$Validation_Validation_$Impl_$.ap(v6,thx__$Validation_Validation_$Impl_$.ap(v5,thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a5,b5) {
+		return function(c5) {
+			return f5(a5,b5,c5);
 		};
-	})),function(e11,e21) {
+	})),function(e1,e25) {
 		throw new js__$Boot_HaxeError("Unreachable");
 	}),s),s),s),s),s),s);
 };
@@ -6611,31 +6633,31 @@ thx__$Validation_Validation_$Impl_$.val8 = function(f,v1,v2,v3,v4,v5,v6,v7,v8,s)
 			return f1(a,b,c,d,e,f0,g,h);
 		};
 	};
-	var f3 = function(a1,b1,c1,d1,e1,f01) {
-		return function(g1) {
-			return f2(a1,b1,c1,d1,e1,f01,g1);
+	var f3 = function(a2,b2,c2,d2,e2,f02) {
+		return function(g2) {
+			return f2(a2,b2,c2,d2,e2,f02,g2);
 		};
 	};
-	var f4 = function(a2,b2,c2,d2,e2) {
-		return function(f02) {
-			return f3(a2,b2,c2,d2,e2,f02);
+	var f4 = function(a3,b3,c3,d3,e3) {
+		return function(f03) {
+			return f3(a3,b3,c3,d3,e3,f03);
 		};
 	};
-	var f5 = function(a3,b3,c3,d3) {
-		return function(e3) {
-			return f4(a3,b3,c3,d3,e3);
+	var f5 = function(a4,b4,c4,d4) {
+		return function(e4) {
+			return f4(a4,b4,c4,d4,e4);
 		};
 	};
-	var f6 = function(a4,b4,c4) {
-		return function(d4) {
-			return f5(a4,b4,c4,d4);
+	var f6 = function(a5,b5,c5) {
+		return function(d5) {
+			return f5(a5,b5,c5,d5);
 		};
 	};
-	return thx__$Validation_Validation_$Impl_$.ap(v8,thx__$Validation_Validation_$Impl_$.ap(v7,thx__$Validation_Validation_$Impl_$.ap(v6,thx__$Validation_Validation_$Impl_$.ap(v5,thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a5,b5) {
-		return function(c5) {
-			return f6(a5,b5,c5);
+	return thx__$Validation_Validation_$Impl_$.ap(v8,thx__$Validation_Validation_$Impl_$.ap(v7,thx__$Validation_Validation_$Impl_$.ap(v6,thx__$Validation_Validation_$Impl_$.ap(v5,thx__$Validation_Validation_$Impl_$.ap(v4,thx__$Validation_Validation_$Impl_$.ap(v3,thx__$Validation_Validation_$Impl_$.ap(v2,thx__$Validation_Validation_$Impl_$.ap(v1,thx_Either.Right(thx_Functions2.curry(function(a6,b6) {
+		return function(c6) {
+			return f6(a6,b6,c6);
 		};
-	})),function(e11,e21) {
+	})),function(e1,e26) {
 		throw new js__$Boot_HaxeError("Unreachable");
 	}),s),s),s),s),s),s),s);
 };
@@ -6691,17 +6713,14 @@ if(Array.prototype.filter == null) Array.prototype.filter = function(f1) {
 	var _g11 = 0;
 	var _g2 = this.length;
 	while(_g11 < _g2) {
-		var i1 = _g11++;
-		var e = this[i1];
+		var i2 = _g11++;
+		var e = this[i2];
 		if(f1(e)) a1.push(e);
 	}
 	return a1;
 };
 if(Math.imul != null) haxe__$Int32_Int32_$Impl_$.mul = Math.imul;
 var __map_reserved = {}
-var ArrayBuffer = $global.ArrayBuffer || js_html_compat_ArrayBuffer;
-if(ArrayBuffer.prototype.slice == null) ArrayBuffer.prototype.slice = js_html_compat_ArrayBuffer.sliceImpl;
-var Uint8Array = $global.Uint8Array || js_html_compat_Uint8Array._new;
 
       // Production steps of ECMA-262, Edition 5, 15.4.4.21
       // Reference: http://es5.github.io/#x15.4.4.21
@@ -6883,7 +6902,6 @@ dots_Query.doc = document;
 haxe_crypto_Base64.CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 haxe_ds_ObjectMap.count = 0;
 js_Boot.__toStr = {}.toString;
-js_html_compat_Uint8Array.BYTES_PER_ELEMENT = 1;
 thx_Floats.TOLERANCE = 10e-5;
 thx_Floats.EPSILON = 1e-9;
 thx_Floats.pattern_parse = new EReg("^(\\+|-)?\\d+(\\.\\d+)?(e-?\\d+)?$","");
