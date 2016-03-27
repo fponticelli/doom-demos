@@ -24,8 +24,7 @@ var doom_html_Render = function(doc,namespaces) {
 			if(__map_reserved[key] != null) _this1.setReserved(key,value); else _this1.h[key] = value;
 		}
 	} else this.namespaces = namespaces;
-	this.nodeToComponent = new haxe_ds_ObjectMap();
-	this.componentToNode = new haxe_ds_ObjectMap();
+	this.domComponentMap = new doom_html__$Render_DomComponentMap();
 };
 doom_html_Render.__name__ = ["doom","html","Render"];
 doom_html_Render.__interfaces__ = [doom_core_IRender];
@@ -36,7 +35,7 @@ doom_html_Render.prototype = {
 	mount: function(node,parent) {
 		parent.innerHTML = "";
 		var post = [];
-		parent.appendChild(this.generateVChildDom(node,post));
+		parent.appendChild(this.generateDom(node,post));
 		var _g = 0;
 		while(_g < post.length) {
 			var f = post[_g];
@@ -46,29 +45,12 @@ doom_html_Render.prototype = {
 	}
 	,apply: function(node,dom) {
 		var post = [];
-		this.applyVChildToNode(node,dom,dom.parentElement,post,false);
+		this.applyToNode(node,dom,dom.parentElement,post,false);
 		var _g = 0;
 		while(_g < post.length) {
 			var f = post[_g];
 			++_g;
 			f();
-		}
-	}
-	,applyVChildToNode: function(node,dom,parent,post,tryUnmount) {
-		if(null == node && null == dom) return null; else if(null == node) {
-			if(tryUnmount) this.unmountDomComponent(dom);
-			parent.removeChild(dom);
-			return null;
-		} else if(null == dom) {
-			var el = this.generateVChildDom(node,post);
-			parent.appendChild(el);
-			return el;
-		}
-		switch(node[1]) {
-		case 0:
-			return this.applyToNode(node[2],dom,parent,post,tryUnmount);
-		case 1:
-			return this.applyComponentToNode(node[2],dom,parent,post);
 		}
 	}
 	,applyToNode: function(node,dom,parent,post,tryUnmount) {
@@ -100,6 +82,8 @@ doom_html_Render.prototype = {
 			var text = node[2];
 			if(tryUnmount) this.unmountDomComponent(dom);
 			return this.applyTextToNode(text,dom,parent,post);
+		case 4:
+			return this.applyComponentToNode(node[2],dom,parent,post);
 		}
 	}
 	,applyNodeToNode: function(srcDom,dstDom,parent,tryUnmount) {
@@ -148,32 +132,44 @@ doom_html_Render.prototype = {
 		}
 	}
 	,applyComponentToNode: function(newComp,dom,parent,post) {
-		var oldComp = this.nodeToComponent.h[dom.__id__];
-		if(null != oldComp) {
-			if(thx_Types.sameType(newComp,oldComp)) {
+		var oldComps = this.domComponentMap.getComponents(dom);
+		if(null != oldComps) {
+			var oldComp = thx_Arrays.find(oldComps,function(comp) {
+				return thx_Types.sameType(comp,newComp);
+			});
+			if(null == oldComp) {
+				var _g = 0;
+				while(_g < oldComps.length) {
+					var oldComp1 = oldComps[_g];
+					++_g;
+					oldComp1.willUnmount();
+					this.domComponentMap.removeByComponent(oldComp1);
+					this.domComponentMap.set(newComp,dom);
+					newComp.willMount();
+					var node = this.renderComponent(newComp);
+					newComp.apply = $bind(this,this.apply);
+					var dom1 = this.applyToNode(node,dom,parent,post,false);
+					newComp.node = dom1;
+					post.splice(0,0,function() {
+						newComp.didMount();
+					});
+					this.domComponentMap.set(newComp,dom1);
+					oldComp1.isUnmounted = true;
+					oldComp1.node = null;
+					oldComp1.didUnmount();
+				}
+				return dom;
+			} else {
 				this.migrate(newComp,oldComp);
 				oldComp.willUpdate();
 				post.push($bind(oldComp,oldComp.didUpdate));
-				if(oldComp.shouldRender()) return this.applyToNode(this.renderComponent(oldComp),dom,parent,post,false); else return dom;
-			} else {
-				oldComp.willUnmount();
-				this.nodeToComponent.set(dom,newComp);
-				this.componentToNode.remove(oldComp);
-				this.componentToNode.set(newComp,dom);
-				newComp.willMount();
-				var node = this.renderComponent(newComp);
-				newComp.apply = $bind(this,this.apply);
-				var dom1 = this.applyToNode(node,dom,parent,post,false);
-				newComp.node = dom1;
-				post.splice(0,0,function() {
-					newComp.didMount();
-				});
-				this.nodeToComponent.set(dom1,newComp);
-				this.componentToNode.set(newComp,dom1);
-				oldComp.isUnmounted = true;
-				oldComp.node = null;
-				oldComp.didUnmount();
-				return dom1;
+				if(oldComp.shouldRender()) {
+					this.domComponentMap.removeByComponent(oldComp);
+					var newDom = this.applyToNode(this.renderComponent(oldComp),dom,parent,post,false);
+					oldComp.node = newDom;
+					this.domComponentMap.set(oldComp,newDom);
+					return newDom;
+				} else return dom;
 			}
 		} else {
 			newComp.willMount();
@@ -184,23 +180,31 @@ doom_html_Render.prototype = {
 			post.splice(0,0,function() {
 				newComp.didMount();
 			});
-			this.nodeToComponent.set(dom2,newComp);
-			this.componentToNode.set(newComp,dom2);
+			this.domComponentMap.set(newComp,dom2);
 			return dom2;
 		}
 	}
 	,unmountDomComponent: function(dom) {
-		var comp = this.nodeToComponent.h[dom.__id__];
-		if(null == comp) return;
-		this.unmountComponent(comp);
+		var comps = this.domComponentMap.getComponents(dom);
+		if(null == comps) return;
+		var _g = 0;
+		while(_g < comps.length) {
+			var comp = comps[_g];
+			++_g;
+			this.unmountComponent(comp);
+		}
 	}
 	,renderComponent: function(comp) {
-		return comp.render();
+		try {
+			return comp.render();
+		} catch( e ) {
+			haxe_CallStack.lastException = e;
+			if (e instanceof js__$Boot_HaxeError) e = e.val;
+			throw new thx_error_ErrorWrapper("unable to render " + thx_Types.toString(Type["typeof"](comp)),e,null,{ fileName : "Render.hx", lineNumber : 225, className : "doom.html.Render", methodName : "renderComponent"});
+		}
 	}
 	,unmountComponent: function(comp) {
-		var node = this.componentToNode.h[comp.__id__];
-		this.componentToNode.remove(comp);
-		this.nodeToComponent.remove(node);
+		this.domComponentMap.removeByComponent(comp);
 		comp.willUnmount();
 		comp.isUnmounted = true;
 		comp.node = null;
@@ -210,8 +214,8 @@ doom_html_Render.prototype = {
 		var _g = this;
 		if(dom.nodeType == 1 && dom.tagName == name.toUpperCase()) {
 			this.applyNodeAttributes(attributes,dom);
-			thx_Arrays.each(this.zipVChildrenAndNodeList(children,dom.childNodes),function(t) {
-				_g.applyVChildToNode(t._0,t._1,dom,post,true);
+			thx_Arrays.each(this.zipVNodesAndNodeList(children,dom.childNodes),function(t) {
+				_g.applyToNode(t._0,t._1,dom,post,true);
 			});
 			return dom;
 		} else return this.replaceChild(parent,dom,this.createElement(name,attributes,children,post));
@@ -233,7 +237,7 @@ doom_html_Render.prototype = {
 		parent.replaceChild(newDom,oldDom);
 		return newDom;
 	}
-	,zipVChildrenAndNodeList: function(vnodes,children) {
+	,zipVNodesAndNodeList: function(vnodes,children) {
 		var len;
 		var a = vnodes.length;
 		var b = children.length;
@@ -318,24 +322,6 @@ doom_html_Render.prototype = {
 			}
 		}
 	}
-	,generateVChildDom: function(node,post) {
-		switch(node[1]) {
-		case 0:
-			return this.generateDom(node[2],post);
-		case 1:
-			var comp = node[2];
-			comp.willMount();
-			var dom = this.generateDom(this.renderComponent(comp),post);
-			comp.node = dom;
-			comp.apply = $bind(this,this.apply);
-			post.splice(0,0,function() {
-				comp.didMount();
-			});
-			this.nodeToComponent.set(dom,comp);
-			this.componentToNode.set(comp,dom);
-			return dom;
-		}
-	}
 	,generateDom: function(node,post) {
 		switch(node[1]) {
 		case 0:
@@ -346,6 +332,17 @@ doom_html_Render.prototype = {
 			return dots_Html.parse(node[2]);
 		case 3:
 			return this.doc.createTextNode(node[2]);
+		case 4:
+			var comp = node[2];
+			comp.willMount();
+			var dom = this.generateDom(this.renderComponent(comp),post);
+			comp.node = dom;
+			comp.apply = $bind(this,this.apply);
+			post.splice(0,0,function() {
+				comp.didMount();
+			});
+			this.domComponentMap.set(comp,dom);
+			return dom;
 		}
 	}
 	,createElement: function(name,attributes,children,post) {
@@ -358,7 +355,7 @@ doom_html_Render.prototype = {
 			var _this = this.namespaces;
 			if(__map_reserved[prefix] != null) tmp = _this.getReserved(prefix); else tmp = _this.h[prefix];
 			var ns = tmp;
-			if(null == ns) throw new thx_Error("element prefix \"" + prefix + "\" is not associated to any namespace. Add the right namespace to Doom.namespaces.",null,{ fileName : "Render.hx", lineNumber : 381, className : "doom.html.Render", methodName : "createElement"});
+			if(null == ns) throw new thx_Error("element prefix \"" + prefix + "\" is not associated to any namespace. Add the right namespace to Doom.namespaces.",null,{ fileName : "Render.hx", lineNumber : 364, className : "doom.html.Render", methodName : "createElement"});
 			el = this.doc.createElementNS(ns,name1);
 		} else el = this.doc.createElement(name);
 		this.applyNodeAttributes(attributes,el);
@@ -366,11 +363,37 @@ doom_html_Render.prototype = {
 		while(tmp1.hasNext()) {
 			var child = tmp1.next();
 			if(null == child) continue;
-			el.appendChild(this.generateVChildDom(child,post));
+			el.appendChild(this.generateDom(child,post));
 		}
 		return el;
 	}
 	,__class__: doom_html_Render
+};
+var doom_html__$Render_DomComponentMap = function() {
+	this.componentToDom = new haxe_ds_ObjectMap();
+	this.domToComponent = new haxe_ds_ObjectMap();
+};
+doom_html__$Render_DomComponentMap.__name__ = ["doom","html","_Render","DomComponentMap"];
+doom_html__$Render_DomComponentMap.prototype = {
+	getComponents: function(dom) {
+		return this.domToComponent.h[dom.__id__];
+	}
+	,set: function(comp,dom) {
+		this.componentToDom.set(comp,dom);
+		var list = this.domToComponent.h[dom.__id__];
+		if(null == list) {
+			list = [comp];
+			this.domToComponent.set(dom,list);
+		} else list.push(comp);
+	}
+	,removeByComponent: function(comp) {
+		var dom = this.componentToDom.h[comp.__id__];
+		this.componentToDom.remove(comp);
+		var list = this.getComponents(dom);
+		HxOverrides.remove(list,comp);
+		if(list.length == 0) this.domToComponent.remove(dom);
+	}
+	,__class__: doom_html__$Render_DomComponentMap
 };
 var Doom = function() { };
 Doom.__name__ = ["Doom"];
@@ -477,7 +500,7 @@ Main.main = function() {
 	store.subscribe(function(_6,_7,action7) {
 		f3(action7);
 	});
-	Doom.browser.mount(doom_core_VChildImpl.Comp(new todomvc_view_App(store)),dots_Query.find("section.todoapp"));
+	Doom.browser.mount(doom_core_VNodeImpl.Comp(new todomvc_view_App(store)),dots_Query.find("section.todoapp"));
 };
 Main.getFilterFromHash = function() {
 	switch(thx_Strings.trimCharsLeft(window.location.hash,"#")) {
@@ -702,16 +725,25 @@ var doom_core_Component = function(props,children) {
 doom_core_Component.__name__ = ["doom","core","Component"];
 doom_core_Component.prototype = {
 	render: function() {
-		throw new thx_error_AbstractMethod({ fileName : "Component.hx", lineNumber : 16, className : "doom.core.Component", methodName : "render"});
+		throw new thx_error_AbstractMethod({ fileName : "Component.hx", lineNumber : 19, className : "doom.core.Component", methodName : "render"});
 	}
 	,asNode: function() {
-		return doom_core_VChildImpl.Comp(this);
+		return doom_core_VNodeImpl.Comp(this);
 	}
 	,update: function(props) {
 		var old = this.props;
 		this.props = props;
 		if(!this.shouldUpdate(old,props) || !this.shouldRender()) return;
-		this.apply(doom_core_VChildImpl.Comp(this),this.node);
+		try {
+			this.apply(doom_core_VNodeImpl.Comp(this),this.node);
+		} catch( e ) {
+			haxe_CallStack.lastException = e;
+			if (e instanceof js__$Boot_HaxeError) e = e.val;
+			this.rethrowUpdateError(e);
+		}
+	}
+	,rethrowUpdateError: function(e) {
+		if(Std.string(e).indexOf("apply is not a function") >= 0) throw new thx_Error("method `apply` has not been correctly migrated to " + Type.getClassName(js_Boot.getClass(this)),null,{ fileName : "Component.hx", lineNumber : 41, className : "doom.core.Component", methodName : "rethrowUpdateError"}); else throw thx_Error.fromDynamic(e,{ fileName : "Component.hx", lineNumber : 43, className : "doom.core.Component", methodName : "rethrowUpdateError"});
 	}
 	,shouldUpdate: function(oldProps,newProps) {
 		return true;
@@ -736,30 +768,28 @@ doom_core_Component.prototype = {
 	}
 	,__class__: doom_core_Component
 };
-var doom_core_VChildImpl = { __ename__ : ["doom","core","VChildImpl"], __constructs__ : ["Node","Comp"] };
-doom_core_VChildImpl.Node = function(node) { var $x = ["Node",0,node]; $x.__enum__ = doom_core_VChildImpl; $x.toString = $estr; return $x; };
-doom_core_VChildImpl.Comp = function(comp) { var $x = ["Comp",1,comp]; $x.__enum__ = doom_core_VChildImpl; $x.toString = $estr; return $x; };
-var doom_core__$VChildren_VChildren_$Impl_$ = {};
-doom_core__$VChildren_VChildren_$Impl_$.__name__ = ["doom","core","_VChildren","VChildren_Impl_"];
-doom_core__$VChildren_VChildren_$Impl_$.children = function(children) {
-	return children;
-};
-doom_core__$VChildren_VChildren_$Impl_$.add = function(this1,child) {
-	this1.push(child);
-	return doom_core__$VChildren_VChildren_$Impl_$.children(this1);
-};
 var doom_core__$VNode_VNode_$Impl_$ = {};
 doom_core__$VNode_VNode_$Impl_$.__name__ = ["doom","core","_VNode","VNode_Impl_"];
 doom_core__$VNode_VNode_$Impl_$.el = function(name,attributes,children) {
 	if(null == attributes) attributes = new haxe_ds_StringMap();
-	if(null == children) children = doom_core__$VChildren_VChildren_$Impl_$.children([]);
+	if(null == children) children = doom_core__$VNodes_VNodes_$Impl_$.children([]);
 	return doom_core_VNodeImpl.Element(name,attributes,children);
 };
-var doom_core_VNodeImpl = { __ename__ : ["doom","core","VNodeImpl"], __constructs__ : ["Element","Comment","Raw","Text"] };
+var doom_core_VNodeImpl = { __ename__ : ["doom","core","VNodeImpl"], __constructs__ : ["Element","Comment","Raw","Text","Comp"] };
 doom_core_VNodeImpl.Element = function(name,attributes,children) { var $x = ["Element",0,name,attributes,children]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
 doom_core_VNodeImpl.Comment = function(comment) { var $x = ["Comment",1,comment]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
 doom_core_VNodeImpl.Raw = function(code) { var $x = ["Raw",2,code]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
 doom_core_VNodeImpl.Text = function(text) { var $x = ["Text",3,text]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
+doom_core_VNodeImpl.Comp = function(comp) { var $x = ["Comp",4,comp]; $x.__enum__ = doom_core_VNodeImpl; $x.toString = $estr; return $x; };
+var doom_core__$VNodes_VNodes_$Impl_$ = {};
+doom_core__$VNodes_VNodes_$Impl_$.__name__ = ["doom","core","_VNodes","VNodes_Impl_"];
+doom_core__$VNodes_VNodes_$Impl_$.children = function(children) {
+	return children;
+};
+doom_core__$VNodes_VNodes_$Impl_$.add = function(this1,child) {
+	this1.push(child);
+	return doom_core__$VNodes_VNodes_$Impl_$.children(this1);
+};
 var doom_html_AttributeType = { __ename__ : ["doom","html","AttributeType"], __constructs__ : ["BooleanAttribute","Property","BooleanProperty","OverloadedBooleanAttribute","NumericAttribute","PositiveNumericAttribute","SideEffectProperty"] };
 doom_html_AttributeType.BooleanAttribute = ["BooleanAttribute",0];
 doom_html_AttributeType.BooleanAttribute.toString = $estr;
@@ -1297,6 +1327,14 @@ thx_Arrays.all = function(arr,predicate) {
 	while(tmp.hasNext()) if(!predicate(tmp.next())) return false;
 	return true;
 };
+thx_Arrays.find = function(array,predicate) {
+	var tmp = HxOverrides.iter(array);
+	while(tmp.hasNext()) {
+		var element = tmp.next();
+		if(predicate(element)) return element;
+	}
+	return null;
+};
 thx_Arrays.findIndex = function(array,predicate) {
 	var _g1 = 0;
 	var _g = array.length;
@@ -1378,6 +1416,10 @@ var thx_Error = function(message,stack,pos) {
 	this.pos = pos;
 };
 thx_Error.__name__ = ["thx","Error"];
+thx_Error.fromDynamic = function(err,pos) {
+	if(js_Boot.__instanceof(err,thx_Error)) return err;
+	return new thx_error_ErrorWrapper("" + Std.string(err),err,null,pos);
+};
 thx_Error.__super__ = Error;
 thx_Error.prototype = $extend(Error.prototype,{
 	toString: function() {
@@ -1532,6 +1574,15 @@ thx_error_AbstractMethod.__super__ = thx_Error;
 thx_error_AbstractMethod.prototype = $extend(thx_Error.prototype,{
 	__class__: thx_error_AbstractMethod
 });
+var thx_error_ErrorWrapper = function(message,innerError,stack,pos) {
+	thx_Error.call(this,message,stack,pos);
+	this.innerError = innerError;
+};
+thx_error_ErrorWrapper.__name__ = ["thx","error","ErrorWrapper"];
+thx_error_ErrorWrapper.__super__ = thx_Error;
+thx_error_ErrorWrapper.prototype = $extend(thx_Error.prototype,{
+	__class__: thx_error_ErrorWrapper
+});
 var thx_promise_Future = function() { };
 thx_promise_Future.__name__ = ["thx","promise","Future"];
 thx_promise_Future.prototype = {
@@ -1674,7 +1725,7 @@ todomvc_view_App.prototype = $extend(doom_html_Component.prototype,{
 		this.props.subscribe(function(_,_2,_3) {
 			f();
 		});
-		return doom_core__$VNode_VNode_$Impl_$.el("div",null,doom_core__$VChildren_VChildren_$Impl_$.children([header.asNode(),body.asNode()]));
+		return doom_core__$VNode_VNode_$Impl_$.el("div",null,doom_core__$VNodes_VNodes_$Impl_$.children([header.asNode(),body.asNode()]));
 	}
 	,__class__: todomvc_view_App
 });
@@ -1695,7 +1746,7 @@ todomvc_view_Body.prototype = $extend(doom_html_Component.prototype,{
 		} else {
 			var all = this.props.state.todos.length;
 			var completed = todomvc_data_VisibilityFilters.filterVisibility(this.props.state.todos,todomvc_data_VisibilityFilter.ShowCompleted).length;
-			return doom_core__$VNode_VNode_$Impl_$.el("div",null,doom_core__$VChildren_VChildren_$Impl_$.children([new todomvc_view_List({ api : this.props.api, state : { items : todomvc_data_VisibilityFilters.filterVisibility(this.props.state.todos,this.props.state.visibilityFilter), allCompleted : completed == 0}}).asNode(),new todomvc_view_Footer({ api : this.props.api, state : { remaining : all - completed, filter : this.props.state.visibilityFilter, hasCompleted : completed > 0}}).asNode()]));
+			return doom_core__$VNode_VNode_$Impl_$.el("div",null,doom_core__$VNodes_VNodes_$Impl_$.children([new todomvc_view_List({ api : this.props.api, state : { items : todomvc_data_VisibilityFilters.filterVisibility(this.props.state.todos,this.props.state.visibilityFilter), allCompleted : completed == 0}}).asNode(),new todomvc_view_Footer({ api : this.props.api, state : { remaining : all - completed, filter : this.props.state.visibilityFilter, hasCompleted : completed > 0}}).asNode()]));
 		}
 	}
 	,__class__: todomvc_view_Body
@@ -1710,7 +1761,7 @@ todomvc_view_Footer.prototype = $extend(doom_html_Component.prototype,{
 		var _g = new haxe_ds_StringMap();
 		var value = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("todo-count");
 		if(__map_reserved["class"] != null) _g.setReserved("class",value); else _g.h["class"] = value;
-		var tmp = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("span",_g,this.getItemsLeftLabel()));
+		var tmp = doom_core__$VNode_VNode_$Impl_$.el("span",_g,this.getItemsLeftLabel());
 		var _g1 = new haxe_ds_StringMap();
 		var value2 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("filters");
 		if(__map_reserved["class"] != null) _g1.setReserved("class",value2); else _g1.h["class"] = value2;
@@ -1727,7 +1778,7 @@ todomvc_view_Footer.prototype = $extend(doom_html_Component.prototype,{
 			f(todomvc_data_VisibilityFilter.ShowAll);
 		});
 		if(__map_reserved.click != null) _g5.setReserved("click",value6); else _g5.h["click"] = value6;
-		var tmp1 = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("li",null,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("a",_g5,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text("All"))])))])));
+		var tmp1 = doom_core__$VNode_VNode_$Impl_$.el("li",null,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core__$VNode_VNode_$Impl_$.el("a",_g5,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core_VNodeImpl.Text("All")]))]));
 		var _g9 = new haxe_ds_StringMap();
 		var _g8 = new haxe_ds_StringMap();
 		var value8 = this.isFilter(todomvc_data_VisibilityFilter.ShowActive);
@@ -1741,7 +1792,7 @@ todomvc_view_Footer.prototype = $extend(doom_html_Component.prototype,{
 			f9(todomvc_data_VisibilityFilter.ShowActive);
 		});
 		if(__map_reserved.click != null) _g9.setReserved("click",value10); else _g9.h["click"] = value10;
-		var tmp2 = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("li",null,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("a",_g9,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text("Active"))])))])));
+		var tmp2 = doom_core__$VNode_VNode_$Impl_$.el("li",null,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core__$VNode_VNode_$Impl_$.el("a",_g9,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core_VNodeImpl.Text("Active")]))]));
 		var _g13 = new haxe_ds_StringMap();
 		var _g12 = new haxe_ds_StringMap();
 		var value12 = this.isFilter(todomvc_data_VisibilityFilter.ShowCompleted);
@@ -1755,14 +1806,14 @@ todomvc_view_Footer.prototype = $extend(doom_html_Component.prototype,{
 			f13(todomvc_data_VisibilityFilter.ShowCompleted);
 		});
 		if(__map_reserved.click != null) _g13.setReserved("click",value14); else _g13.h["click"] = value14;
-		var footerContent = doom_core__$VChildren_VChildren_$Impl_$.children([tmp,doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("ul",_g1,doom_core__$VChildren_VChildren_$Impl_$.children([tmp1,tmp2,doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("li",null,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("a",_g13,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text("Completed"))])))])))])))]);
+		var footerContent = doom_core__$VNodes_VNodes_$Impl_$.children([tmp,doom_core__$VNode_VNode_$Impl_$.el("ul",_g1,doom_core__$VNodes_VNodes_$Impl_$.children([tmp1,tmp2,doom_core__$VNode_VNode_$Impl_$.el("li",null,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core__$VNode_VNode_$Impl_$.el("a",_g13,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core_VNodeImpl.Text("Completed")]))]))]))]);
 		if(this.props.state.hasCompleted) {
 			var _g1414 = new haxe_ds_StringMap();
 			var value15 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("clear-completed");
 			if(__map_reserved["class"] != null) _g1414.setReserved("class",value15); else _g1414.h["class"] = value15;
 			var value16 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromHandler($bind(this,this.handleClear));
 			if(__map_reserved.click != null) _g1414.setReserved("click",value16); else _g1414.h["click"] = value16;
-			doom_core__$VChildren_VChildren_$Impl_$.add(footerContent,doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("button",_g1414,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text("Clear completed"))]))));
+			doom_core__$VNodes_VNodes_$Impl_$.add(footerContent,doom_core__$VNode_VNode_$Impl_$.el("button",_g1414,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core_VNodeImpl.Text("Clear completed")])));
 		}
 		var _g14 = new haxe_ds_StringMap();
 		var value17 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("footer");
@@ -1779,7 +1830,7 @@ todomvc_view_Footer.prototype = $extend(doom_html_Component.prototype,{
 		return Type.enumEq(this.props.state.filter,filter);
 	}
 	,getItemsLeftLabel: function() {
-		if(this.props.state.remaining == 1) return doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("strong",null,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text("1"))]))),doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text(" item left"))]); else return doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("strong",null,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text("" + this.props.state.remaining))]))),doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text(" items left"))]);
+		if(this.props.state.remaining == 1) return doom_core__$VNodes_VNodes_$Impl_$.children([doom_core__$VNode_VNode_$Impl_$.el("strong",null,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core_VNodeImpl.Text("1")])),doom_core_VNodeImpl.Text(" item left")]); else return doom_core__$VNodes_VNodes_$Impl_$.children([doom_core__$VNode_VNode_$Impl_$.el("strong",null,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core_VNodeImpl.Text("" + this.props.state.remaining)])),doom_core_VNodeImpl.Text(" items left")]);
 	}
 	,__class__: todomvc_view_Footer
 });
@@ -1793,7 +1844,7 @@ todomvc_view_Header.prototype = $extend(doom_html_Component.prototype,{
 		var _g = new haxe_ds_StringMap();
 		var value = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("header");
 		if(__map_reserved["class"] != null) _g.setReserved("class",value); else _g.h["class"] = value;
-		var tmp = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("h1",null,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text("todos"))])));
+		var tmp = doom_core__$VNode_VNode_$Impl_$.el("h1",null,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core_VNodeImpl.Text("todos")]));
 		var _g1 = new haxe_ds_StringMap();
 		var value1 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("new-todo");
 		if(__map_reserved["class"] != null) _g1.setReserved("class",value1); else _g1.h["class"] = value1;
@@ -1803,7 +1854,7 @@ todomvc_view_Header.prototype = $extend(doom_html_Component.prototype,{
 		if(__map_reserved.autofocus != null) _g1.setReserved("autofocus",value3); else _g1.h["autofocus"] = value3;
 		var value4 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromEventHandler($bind(this,this.handleKeys));
 		if(__map_reserved.keydown != null) _g1.setReserved("keydown",value4); else _g1.h["keydown"] = value4;
-		return doom_core__$VNode_VNode_$Impl_$.el("header",_g,doom_core__$VChildren_VChildren_$Impl_$.children([tmp,doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("input",_g1,null))]));
+		return doom_core__$VNode_VNode_$Impl_$.el("header",_g,doom_core__$VNodes_VNodes_$Impl_$.children([tmp,doom_core__$VNode_VNode_$Impl_$.el("input",_g1,null)]));
 	}
 	,handleKeys: function(e) {
 		if(13 == e.which) {
@@ -1850,14 +1901,14 @@ todomvc_view_Item.prototype = $extend(doom_html_Component.prototype,{
 		if(__map_reserved.checked != null) _g3.setReserved("checked",value8); else _g3.h["checked"] = value8;
 		var value9 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromHandler(($_=this.props.api,$bind($_,$_.toggle)));
 		if(__map_reserved.change != null) _g3.setReserved("change",value9); else _g3.h["change"] = value9;
-		var tmp = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("input",_g3,null));
-		var tmp1 = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("label",null,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text(this.props.state.item.text))])));
+		var tmp = doom_core__$VNode_VNode_$Impl_$.el("input",_g3,null);
+		var tmp1 = doom_core__$VNode_VNode_$Impl_$.el("label",null,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core_VNodeImpl.Text(this.props.state.item.text)]));
 		var _g4 = new haxe_ds_StringMap();
 		var value10 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("destroy");
 		if(__map_reserved["class"] != null) _g4.setReserved("class",value10); else _g4.h["class"] = value10;
 		var value11 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromHandler(($_=this.props.api,$bind($_,$_.remove)));
 		if(__map_reserved.click != null) _g4.setReserved("click",value11); else _g4.h["click"] = value11;
-		var tmp2 = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("div",_g2,doom_core__$VChildren_VChildren_$Impl_$.children([tmp,tmp1,doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("button",_g4,null))])));
+		var tmp2 = doom_core__$VNode_VNode_$Impl_$.el("div",_g2,doom_core__$VNodes_VNodes_$Impl_$.children([tmp,tmp1,doom_core__$VNode_VNode_$Impl_$.el("button",_g4,null)]));
 		var _g5 = new haxe_ds_StringMap();
 		var value12 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("edit");
 		if(__map_reserved["class"] != null) _g5.setReserved("class",value12); else _g5.h["class"] = value12;
@@ -1867,7 +1918,7 @@ todomvc_view_Item.prototype = $extend(doom_html_Component.prototype,{
 		if(__map_reserved.blur != null) _g5.setReserved("blur",value14); else _g5.h["blur"] = value14;
 		var value15 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromEventHandler($bind(this,this.handleKeydown));
 		if(__map_reserved.keyup != null) _g5.setReserved("keyup",value15); else _g5.h["keyup"] = value15;
-		return doom_core__$VNode_VNode_$Impl_$.el("li",_g1,doom_core__$VChildren_VChildren_$Impl_$.children([tmp2,doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("input",_g5,null))]));
+		return doom_core__$VNode_VNode_$Impl_$.el("li",_g1,doom_core__$VNodes_VNodes_$Impl_$.children([tmp2,doom_core__$VNode_VNode_$Impl_$.el("input",_g5,null)]));
 	}
 	,handleDblClick: function() {
 		this.props.state.editing = true;
@@ -1912,11 +1963,11 @@ todomvc_view_List.prototype = $extend(doom_html_Component.prototype,{
 		if(__map_reserved.checked != null) _g1.setReserved("checked",value3); else _g1.h["checked"] = value3;
 		var value4 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromHandler(($_=this.props.api,$bind($_,$_.toggleAll)));
 		if(__map_reserved.change != null) _g1.setReserved("change",value4); else _g1.h["change"] = value4;
-		var tmp = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("input",_g1,null));
+		var tmp = doom_core__$VNode_VNode_$Impl_$.el("input",_g1,null);
 		var _g2 = new haxe_ds_StringMap();
 		var value5 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("toggle-all");
 		if(__map_reserved["for"] != null) _g2.setReserved("for",value5); else _g2.h["for"] = value5;
-		var tmp1 = doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("label",_g2,doom_core__$VChildren_VChildren_$Impl_$.children([doom_core_VChildImpl.Node(doom_core_VNodeImpl.Text("Mark all as complete"))])));
+		var tmp1 = doom_core__$VNode_VNode_$Impl_$.el("label",_g2,doom_core__$VNodes_VNodes_$Impl_$.children([doom_core_VNodeImpl.Text("Mark all as complete")]));
 		var _g3 = new haxe_ds_StringMap();
 		var value6 = doom_core__$AttributeValue_AttributeValue_$Impl_$.fromString("todo-list");
 		if(__map_reserved["class"] != null) _g3.setReserved("class",value6); else _g3.h["class"] = value6;
@@ -1938,7 +1989,7 @@ todomvc_view_List.prototype = $extend(doom_html_Component.prototype,{
 				};
 			})([item.id],[($_=this.props.api,$bind($_,$_.updateText))])}, state : { item : item, editing : false}}).asNode());
 		}
-		return doom_core__$VNode_VNode_$Impl_$.el("section",_g,doom_core__$VChildren_VChildren_$Impl_$.children([tmp,tmp1,doom_core_VChildImpl.Node(doom_core__$VNode_VNode_$Impl_$.el("ul",_g3,doom_core__$VChildren_VChildren_$Impl_$.children(_g4)))]));
+		return doom_core__$VNode_VNode_$Impl_$.el("section",_g,doom_core__$VNodes_VNodes_$Impl_$.children([tmp,tmp1,doom_core__$VNode_VNode_$Impl_$.el("ul",_g3,doom_core__$VNodes_VNodes_$Impl_$.children(_g4))]));
 	}
 	,__class__: todomvc_view_List
 });
@@ -2020,6 +2071,10 @@ doom_html_Render.defaultNamespaces = (function($this) {
 	var $r;
 	var _g = new haxe_ds_StringMap();
 	if(__map_reserved.svg != null) _g.setReserved("svg","http://www.w3.org/2000/svg"); else _g.h["svg"] = "http://www.w3.org/2000/svg";
+	if(__map_reserved.xlink != null) _g.setReserved("xlink","http://www.w3.org/1999/xlink"); else _g.h["xlink"] = "http://www.w3.org/1999/xlink";
+	if(__map_reserved.ev != null) _g.setReserved("ev","http://www.w3.org/2001/xml-events"); else _g.h["ev"] = "http://www.w3.org/2001/xml-events";
+	if(__map_reserved.xsl != null) _g.setReserved("xsl","http://www.w3.org/1999/XSL/Transform"); else _g.h["xsl"] = "http://www.w3.org/1999/XSL/Transform";
+	if(__map_reserved.m != null) _g.setReserved("m","http://www.w3.org/1998/Math/MathML"); else _g.h["m"] = "http://www.w3.org/1998/Math/MathML";
 	$r = _g;
 	return $r;
 }(this));

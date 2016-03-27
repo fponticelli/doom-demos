@@ -3,11 +3,11 @@ package todomvc.view;
 import todomvc.data.VisibilityFilter;
 import doom.html.Html.*;
 import doom.html.Component;
-import doom.core.VChildren;
+import doom.core.VNodes;
 
 class Footer extends Component<{ api : FooterApi, state : FooterState }> {
   override function render() {
-    var footerContent : VChildren= [
+    var footerContent : VNodes= [
         span([
             "class" => "todo-count"
           ],
@@ -57,7 +57,7 @@ class Footer extends Component<{ api : FooterApi, state : FooterState }> {
   function isFilter(filter : VisibilityFilter)
     return Type.enumEq(props.state.filter, filter);
 
-  function getItemsLeftLabel() : VChildren
+  function getItemsLeftLabel() : VNodes
     return props.state.remaining == 1 ? [strong("1"), " item left"] : [strong('${props.state.remaining}'), " items left"];
 }
 
