@@ -1,0 +1,5 @@
+-lib doom
+-lib dots
+-lib thx.core
+-main Main
+-js index.js
