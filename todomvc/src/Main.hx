@@ -36,6 +36,11 @@ class Main {
       console.log(thx.Enums.string(action));
     });
 
+    // monitor hash change for browser back/forward buttons
+    window.addEventListener('hashchange', function() {
+      hashChange( store );
+    });
+	
     // init app
     Doom.browser.mount(
       new App(store),
@@ -58,5 +63,9 @@ class Main {
       return Json.parse(v);
     else
       return [];
+  }
+  
+  static function hashChange( store : Store<AppState, TodoAction> ) {
+    store.dispatch( SetVisibilityFilter( getFilterFromHash() ) );
   }
 }
