@@ -1,0 +1,25 @@
+{
+  "dependencies": [
+    {
+      "name": "doom",
+      "type": "git",
+      "dir": null,
+      "ref": "59773c9",
+      "url": "git@github.com:fponticelli/doom"
+    },
+    {
+      "name": "dots",
+      "type": "git",
+      "dir": null,
+      "ref": "9b7c752",
+      "url": "git@github.com:fponticelli/dots"
+    },
+    {
+      "name": "thx.core",
+      "type": "git",
+      "dir": null,
+      "ref": "e800498",
+      "url": "git@github.com:fponticelli/thx.core"
+    }
+  ]
+}
