@@ -1,0 +1,10 @@
+-cmd haxelib git doom https://github.com/fponticelli/doom.git master
+-cmd haxelib git dots https://github.com/fponticelli/dots.git master
+-cmd haxelib git lies https://github.com/fponticelli/lies.git master src
+
+-cmd haxelib git thx.http https://github.com/fponticelli/thx.http master
+-cmd haxelib git thx.load https://github.com/fponticelli/thx.load master
+
+-cmd haxelib install thx.promise
+-cmd haxelib install fancysearch
+-cmd haxelib install fancybrowser
