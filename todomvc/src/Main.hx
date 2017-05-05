@@ -16,30 +16,26 @@ using thx.ReadonlyArray;
 class Main {
   public static inline var STORAGE_KEY: String = "TodoMVC-Doom";
   static function main() {
-    var property: Property<AppState> = new Property({
+    var state = {
           visibilityFilter: getFilterFromHash(),
           todos: getTodosFromLocalStorage()
-        }),
+        },
+        property = new Property(state),
         store = new Store(property, todoApp, Middleware.use());
 
     // monitor hash change for browser back/forward buttons
-    window.addEventListener('hashchange', function() {
-      hashChange( store );
-    });
+    window.addEventListener('hashchange', hashChange.bind(store));
 
     // init app
-    var app = new App(store);
-    Doom.browser.mount(app, Query.find("section.todoapp"));
+    Doom.browser.mount(new App(store), Query.find("section.todoapp"));
   }
 
-  static function getFilterFromHash() {
-    var hash = window.location.hash.trimCharsLeft("#");
-    return switch hash {
+  static function getFilterFromHash()
+    return switch window.location.hash.trimCharsLeft("#") {
       case "/active": ShowActive;
       case "/completed": ShowCompleted;
       case _: ShowAll;
     };
-  }
 
   static function getTodosFromLocalStorage(): ReadonlyArray<TodoItem> {
     var v = window.localStorage.getItem(STORAGE_KEY);

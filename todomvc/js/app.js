@@ -685,17 +685,18 @@ HxOverrides.iter = function(a) {
 var Main = function() { };
 Main.__name__ = ["Main"];
 Main.main = function() {
-	var property = new thx_stream_Property({ visibilityFilter : Main.getFilterFromHash(), todos : Main.getTodosFromLocalStorage()});
+	var state = { visibilityFilter : Main.getFilterFromHash(), todos : Main.getTodosFromLocalStorage()};
+	var property = new thx_stream_Property(state);
 	var store = new thx_stream_Store(property,todomvc_data_Reducers.todoApp,todomvc_data_Middleware["use"]());
+	var store1 = store;
 	window.addEventListener("hashchange",function() {
-		Main.hashChange(store);
+		Main.hashChange(store1);
 	});
-	var app = new todomvc_view_App(store);
-	Doom.browser.mount(doom_core_VNodeImpl.Comp(app),dots_Query.find("section.todoapp"));
+	Doom.browser.mount(doom_core_VNodeImpl.Comp(new todomvc_view_App(store)),dots_Query.find("section.todoapp"));
 };
 Main.getFilterFromHash = function() {
-	var hash = thx_Strings.trimCharsLeft(window.location.hash,"#");
-	switch(hash) {
+	var _g = thx_Strings.trimCharsLeft(window.location.hash,"#");
+	switch(_g) {
 	case "/active":
 		return todomvc_data_VisibilityFilter.ShowActive;
 	case "/completed":
@@ -713,7 +714,7 @@ Main.getTodosFromLocalStorage = function() {
 	}
 };
 Main.hashChange = function(store) {
-	store.dispatch(todomvc_data_TodoAction.SetVisibilityFilter(Main.getFilterFromHash()),{ fileName : "Main.hx", lineNumber : 53, className : "Main", methodName : "hashChange"});
+	store.dispatch(todomvc_data_TodoAction.SetVisibilityFilter(Main.getFilterFromHash()),{ fileName : "Main.hx", lineNumber : 49, className : "Main", methodName : "hashChange"});
 };
 Math.__name__ = ["Math"];
 var Reflect = function() { };
