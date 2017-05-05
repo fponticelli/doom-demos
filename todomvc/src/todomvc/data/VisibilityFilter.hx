@@ -1,7 +1,6 @@
 package todomvc.data;
 
 import thx.ReadonlyArray;
-using thx.Arrays;
 using thx.Functions;
 
 enum VisibilityFilter {
@@ -11,7 +10,7 @@ enum VisibilityFilter {
 }
 
 class VisibilityFilters {
-  public static function filterVisibility(arr : ReadonlyArray<TodoItem>, filter : VisibilityFilter)
+  public static function filterVisibility(arr: ReadonlyArray<TodoItem>, filter: VisibilityFilter)
     return switch filter {
       case ShowAll:
         arr.copy();

@@ -21,7 +21,7 @@ class Header extends Component<AddItemApi> {
         ])
       ]);
 
-  function handleKeys(e : KeyboardEvent) {
+  function handleKeys(e: KeyboardEvent) {
     if(Keys.ENTER == e.which) {
       e.preventDefault();
       var value = getInputValueAndEmpty();
@@ -31,7 +31,7 @@ class Header extends Component<AddItemApi> {
   }
 
   function getInputValueAndEmpty() {
-    var el : InputElement = cast element.querySelector("input"),
+    var el: InputElement = cast element.querySelector("input"),
         value = el.value.trim();
     el.value = "";
     return value;
@@ -39,5 +39,5 @@ class Header extends Component<AddItemApi> {
 }
 
 typedef AddItemApi = {
-  public function add(label : String) : Void;
+  public function add(label: String): Void;
 }

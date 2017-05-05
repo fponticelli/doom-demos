@@ -4,10 +4,11 @@ import todomvc.data.VisibilityFilter;
 import doom.html.Html.*;
 import doom.html.Component;
 import doom.core.VNodes;
+import todomvc.data.TodoAction;
 
-class Footer extends Component<{ api : FooterApi, state : FooterState }> {
+class Footer extends Component<{ dispatch: TodoAction -> Void, state: FooterState }> {
   override function render() {
-    var footerContent : VNodes= [
+    var footerContent: VNodes= [
         span([
             "class" => "todo-count"
           ],
@@ -49,25 +50,20 @@ class Footer extends Component<{ api : FooterApi, state : FooterState }> {
   }
 
   function handleClear()
-    props.api.clearCompleted();
+    props.dispatch(ClearCompleted);
 
-  function handleClickFilter(filter : VisibilityFilter)
-    props.api.setFilter(filter);
+  function handleClickFilter(filter: VisibilityFilter)
+    props.dispatch(SetVisibilityFilter(filter));
 
-  function isFilter(filter : VisibilityFilter)
+  function isFilter(filter: VisibilityFilter)
     return Type.enumEq(props.state.filter, filter);
 
-  function getItemsLeftLabel() : VNodes
-    return props.state.remaining == 1 ? [strong("1"), " item left"] : [strong('${props.state.remaining}'), " items left"];
-}
-
-typedef FooterApi = {
-  function setFilter(filter : VisibilityFilter) : Void;
-  function clearCompleted() : Void;
+  function getItemsLeftLabel(): VNodes
+    return props.state.remaining == 1 ? [strong("1"), " item left"]: [strong('${props.state.remaining}'), " items left"];
 }
 
 typedef FooterState = {
-  remaining : Int,
-  filter : VisibilityFilter,
-  hasCompleted : Bool
+  remaining: Int,
+  filter: VisibilityFilter,
+  hasCompleted: Bool
 }

@@ -7,7 +7,7 @@ import todomvc.data.TodoItem;
 using thx.Objects;
 using thx.Strings;
 
-class Item extends Component<{ api : ItemApi, state : ItemState }> {
+class Item extends Component<{ api: ItemApi, state: ItemState }> {
   override function render()
     return li([
         "class" => [
@@ -52,17 +52,17 @@ class Item extends Component<{ api : ItemApi, state : ItemState }> {
     } else if(value != props.state.item.text) {
       props.api.updateText(value);
     } else {
-      update(props.merge({ state : { item : props.state.item, editing : false }}));
+      update(props.shallowMerge({ state: { item: props.state.item, editing: false }}));
     }
   }
 
-  function handleKeydown(e : KeyboardEvent) {
+  function handleKeydown(e: KeyboardEvent) {
     if(e.which != dots.Keys.ENTER)
       return;
     handleBlur();
   }
 
-  function getInput() : js.html.InputElement
+  function getInput(): js.html.InputElement
     return cast element.querySelector("input.edit");
 
   function getInputValueAndTrim() {
@@ -72,12 +72,12 @@ class Item extends Component<{ api : ItemApi, state : ItemState }> {
 }
 
 typedef ItemApi = {
-  public function remove() : Void;
-  public function toggle() : Void;
-  public function updateText(text : String) : Void;
+  public function remove(): Void;
+  public function toggle(): Void;
+  public function updateText(text: String): Void;
 }
 
 typedef ItemState = {
-  item : TodoItem,
-  editing : Bool
+  item: TodoItem,
+  editing: Bool
 }

@@ -2,50 +2,34 @@ import dots.Query;
 import todomvc.view.App;
 import todomvc.data.AppState;
 import todomvc.data.TodoAction;
+import todomvc.data.TodoItem;
 import todomvc.data.VisibilityFilter;
 import todomvc.data.Reducers.*;
-import lies.Store;
+import todomvc.data.Middleware;
+import thx.stream.Property;
+import thx.stream.Store;
 import js.Browser.*;
 import haxe.Json;
 using thx.Strings;
+using thx.ReadonlyArray;
 
 class Main {
-  static inline var STORAGE_KEY : String = "TodoMVC-Doom";
+  public static inline var STORAGE_KEY: String = "TodoMVC-Doom";
   static function main() {
-    var store = Store.create(todoApp, {
-      visibilityFilter : getFilterFromHash(),
-      todos : getTodosFromLocalStorage()
-    });
-
-    // save changes to local storage
-    store.subscribe(function(state : AppState) {
-      window.localStorage.setItem(STORAGE_KEY, Json.stringify(state.todos));
-    });
-
-    // set filter in hash
-    store.subscribe(function(state : AppState) {
-      window.location.hash = switch state.visibilityFilter {
-        case ShowActive: "/active";
-        case ShowCompleted: "/completed";
-        case _: "";
-      };
-    });
-
-    // log to console
-    store.subscribe(function(action : TodoAction) {
-      console.log(thx.Enums.string(action));
-    });
+    var property: Property<AppState> = new Property({
+          visibilityFilter: getFilterFromHash(),
+          todos: getTodosFromLocalStorage()
+        }),
+        store = new Store(property, todoApp, Middleware.use());
 
     // monitor hash change for browser back/forward buttons
     window.addEventListener('hashchange', function() {
       hashChange( store );
     });
-	
+
     // init app
-    Doom.browser.mount(
-      new App(store),
-      Query.find("section.todoapp")
-    );
+    var app = new App(store);
+    Doom.browser.mount(app, Query.find("section.todoapp"));
   }
 
   static function getFilterFromHash() {
@@ -57,15 +41,14 @@ class Main {
     };
   }
 
-  static function getTodosFromLocalStorage() {
+  static function getTodosFromLocalStorage(): ReadonlyArray<TodoItem> {
     var v = window.localStorage.getItem(STORAGE_KEY);
     if(v.hasContent())
       return Json.parse(v);
     else
       return [];
   }
-  
-  static function hashChange( store : Store<AppState, TodoAction> ) {
-    store.dispatch( SetVisibilityFilter( getFilterFromHash() ) );
-  }
+
+  static function hashChange(store: Store<AppState, TodoAction>)
+    store.dispatch(SetVisibilityFilter(getFilterFromHash()));
 }

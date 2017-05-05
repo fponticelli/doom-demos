@@ -20,6 +20,20 @@
       "dir": null,
       "ref": "e800498",
       "url": "git@github.com:fponticelli/thx.core"
+    },
+    {
+      "name": "thx.promise",
+      "type": "git",
+      "dir": null,
+      "ref": "65379a9",
+      "url": "git@github.com:fponticelli/thx.promise"
+    },
+    {
+      "name": "thx.stream",
+      "type": "git",
+      "dir": null,
+      "ref": "bf4520c",
+      "url": "git@github.com:fponticelli/thx.stream"
     }
   ]
 }

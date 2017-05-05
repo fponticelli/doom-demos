@@ -2,38 +2,27 @@ package todomvc.view;
 
 import doom.html.Html.*;
 import doom.html.Component;
-import lies.Store;
+import thx.stream.Store;
 import todomvc.data.AppState;
 import todomvc.data.TodoAction;
-import todomvc.data.VisibilityFilter;
 using thx.Objects;
 
 class App extends Component<Store<AppState, TodoAction>> {
   override function render() {
     var bodyProps = {
-          api : {
-            setFilter : function(filter : VisibilityFilter)
-              props.dispatch(SetVisibilityFilter(filter)),
-            clearCompleted : function()
-              props.dispatch(ClearCompleted),
-            remove : function(id : String)
-              props.dispatch(Remove(id)),
-            toggle : function(id : String)
-              props.dispatch(Toggle(id)),
-            toggleAll : function()
-              props.dispatch(ToggleAll),
-            updateText : function(id : String, text : String)
-              props.dispatch(UpdateText(id, text))
-          },
-          state : props.state
+          dispatch : function(a) props.dispatch(a),
+          state : props.get()
         },
         header = new Header({
           add : function(text) props.dispatch(Add(text))
         }),
         body = new Body(bodyProps);
-    props.subscribe(function() {
-      body.update(bodyProps.merge({ state : props.state }));
-    });
+    props.stream()
+      // stream can be synchronouse and `next` is going to trigger an updated
+      // before the component has the opportunity to render
+      .delayed(0)
+      .next((v) -> body.update(bodyProps.shallowMerge({ state : v })))
+      .run();
     return div([header.asNode(), body.asNode()]);
   }
 }

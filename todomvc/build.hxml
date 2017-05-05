@@ -2,9 +2,9 @@
 -cp src
 -lib doom
 -lib dots
--lib lies
 -lib thx.core
 -lib thx.promise
+-lib thx.stream
 -main Main
 -D html
 #-debug
