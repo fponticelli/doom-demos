@@ -6,7 +6,11 @@ Some code samples and demos for Doom
 
 [Simple SVG generation](https://rawgit.com/fponticelli/doom-demos/master/svg/www/index.html)
 
-[External lib: FancySearch](https://rawgit.com/fponticelli/doom-demos/master/fancysearch/www/index.html)
+[External lib: FancySearch](https://github.com/pellucidanalytics/doom-fancysearch/)
+
+[Mount Component](https://rawgit.com/fponticelli/doom-demos/master/readme/mountcomponent/index.html)
+
+[Mount Element](https://rawgit.com/fponticelli/doom-demos/master/readme/mountelement/index.html)
 
 # Installing
 
