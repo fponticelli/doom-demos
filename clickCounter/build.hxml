@@ -1,0 +1,8 @@
+-js counter.js
+-lib doom
+-lib dots
+-lib thx.core
+-lib thx.promise
+-lib thx.stream
+-debug
+-main CounterExample
