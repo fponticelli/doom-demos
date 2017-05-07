@@ -2,6 +2,7 @@ import doom.html.Component;
 import doom.html.Html.*;
 using thx.Objects;
 import thx.Timer;
+import doom.Doom;
 
 class Main {
   static function main() {

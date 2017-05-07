@@ -1,5 +1,6 @@
 import dots.Query;
 import svg.SvgApp;
+import doom.Doom;
 
 class Main {
   static function main() {

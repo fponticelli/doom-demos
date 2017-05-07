@@ -12,6 +12,7 @@ import js.Browser.*;
 import haxe.Json;
 using thx.Strings;
 using thx.ReadonlyArray;
+import doom.Doom;
 
 class Main {
   public static inline var STORAGE_KEY: String = "TodoMVC-Doom";

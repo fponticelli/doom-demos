@@ -1,5 +1,6 @@
 import doom.html.Html.*;
 import js.Browser.document as doc;
+import doom.Doom;
 
 class Main {
   static function main()
